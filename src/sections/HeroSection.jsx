@@ -35,7 +35,7 @@ const HeroSection = () => (
       <div data-reveal className="flex items-center gap-2 mb-6">
         <span className="w-6 h-px" style={{ background:'linear-gradient(90deg,#00f2fe,transparent)' }} />
         <span className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-[0.2em]">
-          HELIX · NARRATIVE ENGINE
+          The Labyrinth · NARRATIVE ENGINE
         </span>
       </div>
 
@@ -71,7 +71,7 @@ const HeroSection = () => (
       </h1>
 
       <p data-reveal className="text-[13.5px] text-slate-400 leading-relaxed max-w-lg mb-10">
-        HELIX maps the hidden architectures of cinema's most mind-bending films —
+        The Labyrinth maps the hidden architectures of cinema's most mind-bending films —
         every character, every event, and the precise moments where reality breaks.
       </p>
 
@@ -134,15 +134,7 @@ const HeroSection = () => (
       </div>
     </div>
 
-    {/* Version tag */}
-    <div data-reveal className="absolute top-8 right-8 flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-      style={{ background:'rgba(0,242,254,0.05)', border:'1px solid rgba(0,242,254,0.12)' }}>
-      <span className="relative flex h-1.5 w-1.5">
-        <span className="animate-ping absolute inset-0 rounded-full opacity-60" style={{ background:'#00f2fe' }} />
-        <span className="relative flex h-1.5 w-1.5 rounded-full" style={{ background:'#00f2fe' }} />
-      </span>
-      <span className="text-[10px] font-mono text-cyan-400/60">v1.0 · 3 films indexed</span>
-    </div>
+
 
     <SCROLL_HINT />
   </div>

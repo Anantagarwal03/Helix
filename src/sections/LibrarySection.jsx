@@ -134,7 +134,7 @@ const AddCard = () => (
     </div>
     <div className="text-center">
       <p className="text-[11.5px] font-medium text-slate-700 group-hover:text-slate-500 transition-colors">Index new film</p>
-      <p className="text-[10px] font-mono text-slate-800 mt-0.5">Add to HELIX library</p>
+      <p className="text-[10px] font-mono text-slate-800 mt-0.5">Add to The Labyrinth library</p>
     </div>
   </div>
 )

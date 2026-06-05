@@ -43,12 +43,7 @@ const NavItem = ({ item, index, active, onClick }) => (
   <button
     id={`nav-${item.label.toLowerCase()}`}
     onClick={() => onClick(index)}
-    className="group relative flex w-full items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150"
-    style={{
-      color: active ? '#ffffff' : '#475569',
-    }}
-    onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#94a3b8' }}
-    onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#475569' }}
+    className={`group relative flex w-full items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150 ${active ? 'text-white' : 'text-gray-400 hover:text-white'}`}
   >
     {/* Neon left indicator */}
     {active && (
@@ -69,13 +64,13 @@ const NavItem = ({ item, index, active, onClick }) => (
       {item.icon}
     </span>
 
-    <span className="text-[12px] font-medium tracking-[-0.01em] flex-1">
+    <span className="text-sm font-medium tracking-wide flex-1">
       {item.label}
     </span>
 
     {item.count !== undefined && (
-      <span className="text-[10px] font-mono tabular-nums"
-        style={{ color: active ? 'rgba(0,242,254,0.5)' : '#1e293b' }}>
+      <span className="text-xs font-mono tabular-nums"
+        style={{ color: active ? 'rgba(0,242,254,0.8)' : '#94a3b8' }}>
         {item.count}
       </span>
     )}
@@ -111,14 +106,14 @@ const Sidebar = ({ activeSection, onNavigate }) => (
         </div>
         <div>
           <div className="text-[12px] font-semibold tracking-[-0.02em] text-white">HELIX</div>
-          <div className="text-[9px] font-mono text-slate-800 mt-0.5 tracking-[0.07em]">TWIST ENGINE</div>
+          <div className="text-[9px] font-mono text-gray-500 mt-0.5 tracking-[0.07em]">TWIST ENGINE</div>
         </div>
       </div>
     </div>
 
     {/* ── Nav ──────────────────────────────────────────── */}
     <div className="flex-1 overflow-y-auto px-2 py-3">
-      <p className="px-3 mb-2 text-[9px] font-medium text-slate-800 uppercase tracking-[0.12em]">
+      <p className="px-3 mb-2 text-[9px] font-medium text-gray-500 uppercase tracking-[0.12em]">
         Sections
       </p>
       <nav className="flex flex-col gap-0.5">
@@ -132,50 +127,8 @@ const Sidebar = ({ activeSection, onNavigate }) => (
           />
         ))}
       </nav>
-
-      <div className="mx-3 my-4" style={{ height:'1px', background:'rgba(255,255,255,0.04)' }} />
-
-      {/* Scroll indicator */}
-      <div className="px-3">
-        <p className="text-[9px] font-mono text-slate-800 uppercase tracking-[0.1em] mb-2">Progress</p>
-        <div className="flex flex-col gap-1.5">
-          {NAV.map((item, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div
-                className="w-1 h-1 rounded-full flex-shrink-0 transition-all duration-300"
-                style={{
-                  background: activeSection === i ? '#00f2fe' : '#1e293b',
-                  boxShadow: activeSection === i ? '0 0 6px rgba(0,242,254,0.8)' : 'none',
-                  transform: activeSection === i ? 'scale(1.5)' : 'scale(1)',
-                }}
-              />
-              <span className="text-[10px] font-mono transition-colors duration-200"
-                style={{ color: activeSection === i ? '#475569' : '#1e293b' }}>
-                {String(i + 1).padStart(2,'0')} {item.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
 
-    {/* ── Status footer ────────────────────────────────── */}
-    <div className="flex-shrink-0 px-3 pb-4 pt-2"
-      style={{ borderTop:'1px solid rgba(255,255,255,0.04)' }}>
-      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
-        style={{ background:'rgba(255,255,255,0.015)', border:'1px solid rgba(255,255,255,0.04)' }}>
-        <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
-          <span className="animate-ping absolute inset-0 rounded-full opacity-60"
-            style={{ background:'#00f2fe' }} />
-          <span className="relative flex h-1.5 w-1.5 rounded-full"
-            style={{ background:'#00f2fe' }} />
-        </span>
-        <div>
-          <p className="text-[10px] font-medium text-slate-600 leading-none">Live</p>
-          <p className="text-[9px] font-mono text-slate-800 mt-0.5">GSAP · OGL · v1.0</p>
-        </div>
-      </div>
-    </div>
   </aside>
 )
 

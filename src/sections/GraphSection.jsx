@@ -213,7 +213,7 @@ const GraphSection = ({ initialNode }) => {
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <span className="w-5 h-px" style={{ background:'linear-gradient(90deg,#7c3aed,transparent)' }} />
-            <span className="text-[10px] font-mono text-violet-400/50 uppercase tracking-[0.18em]">02 — Workspace</span>
+            <span className="text-[10px] font-mono text-violet-400/50 uppercase tracking-[0.18em]">02 — The Labyrinth</span>
           </div>
           <h2 className="text-[26px] font-bold text-white tracking-tight leading-none mt-1">
             <GlitchText speed={0.5} enableShadows={true} enableOnHover={true}>Twist Graph</GlitchText>
@@ -224,19 +224,7 @@ const GraphSection = ({ initialNode }) => {
           </h2>
         </div>
 
-        {/* Live chip */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-500"
-          style={{ background:mounted?'rgba(0,242,254,0.06)':'rgba(255,255,255,0.02)', border:mounted?'1px solid rgba(0,242,254,0.15)':'1px solid rgba(255,255,255,0.05)' }}>
-          {mounted && (
-            <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
-              <span className="animate-ping absolute inset-0 rounded-full opacity-60" style={{ background:'#00f2fe' }} />
-              <span className="relative flex h-1.5 w-1.5 rounded-full" style={{ background:'#00f2fe' }} />
-            </span>
-          )}
-          <span className="text-[10px] font-mono" style={{ color:mounted?'#00f2fe':'#475569' }}>
-            {mounted ? 'Live · react-force-graph-3d' : 'Initializing…'}
-          </span>
-        </div>
+
       </div>
 
       {/* 3D Canvas */}
@@ -293,9 +281,9 @@ const GraphSection = ({ initialNode }) => {
             style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>
             <div className="flex items-center gap-2">
               <h3 className="text-[11.5px] font-semibold text-white/70 tracking-tight">Twist Events</h3>
-              <span className="text-[10px] font-mono text-slate-700">· 3 films · 22 nodes · 31 links</span>
+              <span className="text-[10px] font-mono text-slate-400">· 3 films · 22 nodes · 31 links</span>
             </div>
-            <button className="text-[10.5px] font-mono text-slate-700 hover:text-slate-500 transition-colors">Full table →</button>
+            <button className="text-[10.5px] font-mono text-slate-300 hover:text-white transition-colors">Full table →</button>
           </div>
           {EVENTS.map((row, i) => {
             const hi = highlightedRow === i
@@ -310,11 +298,11 @@ const GraphSection = ({ initialNode }) => {
                 <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all duration-200"
                   style={{ background:row.color, boxShadow:hi?`0 0 8px ${row.color}`:'none', transform:hi?'scale(1.5)':'scale(1)' }} />
                 <span className="text-[12px] font-medium w-32 flex-shrink-0 truncate transition-colors duration-200"
-                  style={{ color:hi?'#fff':'rgba(255,255,255,0.4)' }}>{row.filmName}</span>
+                  style={{ color:hi?'#fff':'#cbd5e1' }}>{row.filmName}</span>
                 <span className="text-[11px] font-mono flex-shrink-0 transition-colors duration-200"
-                  style={{ color:hi?`${row.color}cc`:`${row.color}45`, width:120 }}>{row.char}</span>
+                  style={{ color:hi?`${row.color}cc`:`${row.color}99`, width:120 }}>{row.char}</span>
                 <span className="text-[11px] flex-1 truncate transition-colors duration-200"
-                  style={{ color:hi?'rgba(255,255,255,0.6)':'#334155' }}>{row.event}</span>
+                  style={{ color:hi?'#f8fafc':'#94a3b8' }}>{row.event}</span>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full flex-shrink-0 transition-all duration-200"
                   style={{ color:row.color, background:hi?`${row.color}18`:`${row.color}08`, border:`1px solid ${hi?row.color+'40':row.color+'16'}` }}>
                   {hi ? '▶ active' : 'indexed'}

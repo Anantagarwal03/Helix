@@ -7,14 +7,22 @@ export default function FilmDetail() {
   const film = FILM_DETAILS.find(f => f.id === filmId)
 
   useEffect(() => {
-    window.scrollTo(0, 0)
+    if (window.gsap) {
+      window.gsap.killTweensOf("*")
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+
     document.body.style.overflow = "auto"
-    document.documentElement.style.overscrollBehavior = "auto"
+    document.body.style.position = "static"
+    document.body.style.height = "auto"
+    document.documentElement.style.overflow = "auto"
+    document.documentElement.style.height = "auto"
   }, [])
 
   if (!film) {
     return (
-      <div className="flex flex-col items-center justify-center w-full min-h-screen h-auto overflow-y-auto scroll-smooth text-white">
+      <div className="w-full min-h-screen overflow-y-auto block relative p-8 text-white flex flex-col items-center justify-center">
         <h1 className="text-3xl font-bold mb-4">Film not found</h1>
         <Link to="/" className="text-[#00f2fe] hover:text-[#8b5cf6] transition-colors">
           ← Return to The Labyrinth
@@ -24,7 +32,7 @@ export default function FilmDetail() {
   }
 
   return (
-    <div className="relative w-full min-h-screen h-auto p-8 pb-24 md:p-16 md:pb-32 lg:p-24 lg:pb-40 overflow-y-auto scroll-smooth" style={{ zIndex: 10 }}>
+    <div className="w-full min-h-screen overflow-y-auto block relative p-8 pb-24 md:p-16 md:pb-32 lg:p-24 lg:pb-40 scroll-smooth" style={{ zIndex: 10 }}>
       
       <nav className="pb-8">
         <Link

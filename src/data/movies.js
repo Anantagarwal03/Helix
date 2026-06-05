@@ -1,4 +1,4 @@
-// HELIX — Canonical data constants
+// The Labyrinth — Canonical data constants
 export const MOVIES = [
   {
     id: 1,
