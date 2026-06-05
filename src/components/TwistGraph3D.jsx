@@ -10,7 +10,7 @@ const NODE_COLOR = {
   twist: '#ec4899',
 }
 
-const GRAPH_DATA = {
+export const INITIAL_GRAPH_DATA = {
   nodes: [
     { id: 'ss-film', label: 'The Sixth Sense', film: 'ss', filmName: 'The Sixth Sense', type: 'film', size: 8,
       revealText: 'Not every gift is a blessing.',
@@ -217,7 +217,7 @@ const nodeLabel = node => {
   </div>`
 }
 
-const TwistGraph3D = ({ onMount, onNodeClick: onNodeClickProp, initialNode }) => {
+const TwistGraph3D = ({ graphData, onMount, onNodeClick: onNodeClickProp, initialNode }) => {
   const wrapperRef = useRef(null)
   const graphRef = useRef(null)
   const [dims, setDims] = useState({ w: 800, h: 600 })
@@ -362,7 +362,7 @@ const TwistGraph3D = ({ onMount, onNodeClick: onNodeClickProp, initialNode }) =>
         ref={graphRef}
         width={dims.w}
         height={dims.h}
-        graphData={GRAPH_DATA}
+        graphData={graphData}
         backgroundColor="rgba(0,0,0,0)"
         nodeLabel={nodeLabel}
         nodeColor={nodeColor}
