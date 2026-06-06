@@ -4,6 +4,8 @@
  * onNavigate(index): programmatic GSAP scroll
  */
 
+import { useNavigate, useLocation } from 'react-router-dom'
+
 const NAV = [
   {
     label: 'Overview',
@@ -36,6 +38,15 @@ const NAV = [
       </svg>
     ),
     count: 3,
+  },
+  {
+    label: 'Timelines',
+    path: '/timeline',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 15 15" fill="none">
+        <path d="M2 7.5h11m-3-3l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
   },
 ]
 
@@ -77,7 +88,11 @@ const NavItem = ({ item, index, active, onClick }) => (
   </button>
 )
 
-const Sidebar = ({ activeSection, onNavigate }) => (
+const Sidebar = ({ activeSection, onNavigate }) => {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  return (
   <aside
     className="flex flex-col h-full relative"
     style={{
@@ -117,19 +132,33 @@ const Sidebar = ({ activeSection, onNavigate }) => (
         Sections
       </p>
       <nav className="flex flex-col gap-0.5">
-        {NAV.map((item, i) => (
-          <NavItem
-            key={item.label}
-            item={item}
-            index={i}
-            active={activeSection === i}
-            onClick={onNavigate}
-          />
-        ))}
+        {NAV.map((item, i) => {
+          const isActive = item.path ? location.pathname === item.path : (location.pathname === '/' && activeSection === i)
+          return (
+            <NavItem
+              key={item.label}
+              item={item}
+              index={i}
+              active={isActive}
+              onClick={() => {
+                if (item.path) {
+                  navigate(item.path)
+                } else {
+                  if (location.pathname !== '/') {
+                    navigate('/')
+                  } else if (onNavigate) {
+                    onNavigate(i)
+                  }
+                }
+              }}
+            />
+          )
+        })}
       </nav>
     </div>
 
   </aside>
-)
+  )
+}
 
 export default Sidebar

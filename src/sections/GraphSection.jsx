@@ -12,7 +12,6 @@ import { useState, useCallback } from 'react'
 import GlitchText    from '../components/animations/GlitchText'
 import DecryptedText from '../components/animations/DecryptedText'
 import TwistGraph3D, { INITIAL_GRAPH_DATA } from '../components/TwistGraph3D'
-import TimelinePanel from '../components/TimelinePanel'
 
 const FILM_COLOR = { ss:'#00f2fe', dd:'#8b5cf6', z:'#ec4899' }
 const FILM_NAME  = { ss:'The Sixth Sense', dd:'Donnie Darko', z:'Zodiac' }
@@ -203,17 +202,6 @@ const GraphSection = ({ initialNode }) => {
   const handleNodeClick  = useCallback(node => setSelectedNode(node), [])
   const closePanel       = useCallback(() => setSelectedNode(null), [])
 
-  const handleBranch = useCallback((newNode, newLink) => {
-    setGraphData(prev => {
-      // Check if node already exists to prevent duplicates on rapid clicks
-      if (prev.nodes.some(n => n.id === newNode.id)) return prev;
-      return {
-        nodes: [...prev.nodes, newNode],
-        links: [...prev.links, newLink],
-      }
-    })
-  }, [])
-
   const highlightedRow = selectedNode
     ? EVENTS.findIndex(e => e.nodeIds.includes(selectedNode.id))
     : -1
@@ -240,9 +228,9 @@ const GraphSection = ({ initialNode }) => {
 
       </div>
 
-      {/* Split-Screen 3D Canvas & Timeline Grid */}
-      <div data-reveal className="w-full grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        <div className="lg:col-span-3 w-full h-[600px] relative rounded-2xl overflow-hidden border border-white/10 bg-black/20">
+      {/* 3D Canvas */}
+      <div data-reveal className="flex-1 min-h-0 relative rounded-xl overflow-hidden"
+        style={{ background:'rgba(0,0,0,0.28)', border:'1px solid rgba(255,255,255,0.05)' }}>
 
         {/* Legend HUD */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5"
@@ -285,11 +273,6 @@ const GraphSection = ({ initialNode }) => {
 
         {/* Live 3D graph */}
         <TwistGraph3D graphData={graphData} onMount={handleGraphMount} onNodeClick={handleNodeClick} initialNode={initialNode} />
-
-        </div>
-
-        {/* Timeline "What-If" Control Panel */}
-        <TimelinePanel onBranch={handleBranch} />
       </div>
 
       {/* Event Index table */}

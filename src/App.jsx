@@ -4,6 +4,7 @@ import './index.css'
 import Galaxy from './components/animations/Galaxy'
 import Home from './views/Home'
 import FilmDetail from './views/FilmDetail'
+import TimelineEngine from './views/TimelineEngine'
 
 function AppLayout() {
   const location = useLocation()
@@ -39,6 +40,7 @@ function AppLayout() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/film/:filmId" element={<FilmDetail />} />
+          <Route path="/timeline" element={<TimelineEngine />} />
         </Routes>
       </div>
     </div>
