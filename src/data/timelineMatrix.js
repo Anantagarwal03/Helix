@@ -9,14 +9,32 @@ export const timelineMatrix = {
         bgImage: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=2000&q=80",
         choices: [
           { label: "Follow the voice (Frank)", targetId: "dd-tangent-active" },
-          { label: "Ignore it and stay in bed", targetId: "dd-instant-collapse" }
+          { label: "Ignore it and stay in bed", targetId: "dd-tangent-start" }
         ]
       },
-      'dd-instant-collapse': {
-        title: "Primary Universe Preserved",
-        description: "Donnie ignores the voice and is crushed by the jet engine. He dies instantly. The Tangent Universe never forms. The primary timeline remains intact, but Donnie's story ends here.",
+      'dd-tangent-start': {
+        title: "The Unstable Timeline",
+        description: "Donnie ignores Frank. The engine crashes but he miraculously survives. Without Frank's guidance, the universe immediately becomes highly unstable.",
         type: 'tangent',
-        effect: 'glitch',
+        effect: 'blackhole',
+        choices: [
+          { label: "Go outside", targetId: "dd-tangent-middle" }
+        ]
+      },
+      'dd-tangent-middle': {
+        title: "The Sky Tears Apart",
+        description: "The sky begins to tear apart with violent temporal storms. Physics start to break down around him as the paradox reaches critical mass.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: [
+          { label: "Wait for the end", targetId: "dd-tangent-end" }
+        ]
+      },
+      'dd-tangent-end': {
+        title: "Total Collapse",
+        description: "Total collapse. The tangent universe folds in on itself, crushing all life and erasing the timeline completely.",
+        type: 'tangent',
+        effect: 'blackhole',
         isEnding: true,
         choices: []
       },
@@ -45,14 +63,35 @@ export const timelineMatrix = {
         bgImage: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=2000&q=80",
         choices: [
           { label: "Burn down the house", targetId: "dd-grandma-death" },
-          { label: "Refuse the violence", targetId: "dd-time-expires" }
+          { label: "Refuse the violence", targetId: "dd-tangent-1" }
         ]
       },
-      'dd-time-expires': {
-        title: "The 28 Days Run Out",
-        description: "Donnie refuses to commit arson. The timeline stalls. On Halloween night, the 28-day limit expires without the engine being sent back, resulting in a cataclysmic collapse of space-time.",
+      'dd-tangent-1': {
+        title: "Stalled Timeline",
+        description: "Donnie refuses to commit arson. The timeline stalls.",
         type: 'tangent',
-        effect: 'vhs',
+        effect: 'blackhole',
+        tangentDepth: 1,
+        choices: [
+          { label: "Continue", targetId: "dd-tangent-2" }
+        ]
+      },
+      'dd-tangent-2': {
+        title: "Reality Frays",
+        description: "Reality begins to fray. Physics behave erratically.",
+        type: 'tangent',
+        effect: 'blackhole',
+        tangentDepth: 2,
+        choices: [
+          { label: "Continue", targetId: "dd-tangent-3" }
+        ]
+      },
+      'dd-tangent-3': {
+        title: "Universal Swallow",
+        description: "Total localized collapse. The universe is swallowed.",
+        type: 'tangent',
+        effect: 'blackhole',
+        tangentDepth: 3,
         isEnding: true,
         choices: []
       },
@@ -70,7 +109,7 @@ export const timelineMatrix = {
         title: "An Empty Victory",
         description: "Donnie stays at the party. Gretchen never gets hit by the car, and Frank never shoots her. However, without her death, Donnie lacks the emotional trigger to sacrifice himself. The universe tears itself apart.",
         type: 'tangent',
-        effect: 'glitch',
+        effect: 'blackhole',
         isEnding: true,
         choices: []
       },

@@ -56,7 +56,7 @@ export default function TimelineEngine() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 1.5 }}
               >
-                <TimelineEffects effect={currentNode.effect} />
+                <TimelineEffects effect={currentNode.effect} tangentDepth={currentNode.tangentDepth || 1} />
               </motion.div>
             )}
           </AnimatePresence>
