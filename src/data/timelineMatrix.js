@@ -63,35 +63,14 @@ export const timelineMatrix = {
         bgImage: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=2000&q=80",
         choices: [
           { label: "Burn down the house", targetId: "dd-grandma-death" },
-          { label: "Refuse the violence", targetId: "dd-tangent-1" }
+          { label: "Refuse the violence", targetId: "dd-time-expires" }
         ]
       },
-      'dd-tangent-1': {
-        title: "Stalled Timeline",
-        description: "Donnie refuses to commit arson. The timeline stalls.",
+      'dd-time-expires': {
+        title: "The 28 Days Run Out",
+        description: "Donnie refuses to commit arson. The timeline stalls. On Halloween night, the 28-day limit expires without the engine being sent back, resulting in a cataclysmic collapse of space-time.",
         type: 'tangent',
         effect: 'blackhole',
-        tangentDepth: 1,
-        choices: [
-          { label: "Continue", targetId: "dd-tangent-2" }
-        ]
-      },
-      'dd-tangent-2': {
-        title: "Reality Frays",
-        description: "Reality begins to fray. Physics behave erratically.",
-        type: 'tangent',
-        effect: 'blackhole',
-        tangentDepth: 2,
-        choices: [
-          { label: "Continue", targetId: "dd-tangent-3" }
-        ]
-      },
-      'dd-tangent-3': {
-        title: "Universal Swallow",
-        description: "Total localized collapse. The universe is swallowed.",
-        type: 'tangent',
-        effect: 'blackhole',
-        tangentDepth: 3,
         isEnding: true,
         choices: []
       },
@@ -102,16 +81,38 @@ export const timelineMatrix = {
         bgImage: "https://images.unsplash.com/photo-1505364841922-386b1603ba7d?auto=format&fit=crop&w=2000&q=80",
         choices: [
           { label: "Go to Grandma Death's cellar", targetId: "dd-the-confrontation" },
-          { label: "Stay at the party and wait", targetId: "dd-gretchen-survives" }
+          { label: "Stay at the party and wait", targetId: "dd-tangent-1" }
         ]
       },
-      'dd-gretchen-survives': {
-        title: "An Empty Victory",
-        description: "Donnie stays at the party. Gretchen never gets hit by the car, and Frank never shoots her. However, without her death, Donnie lacks the emotional trigger to sacrifice himself. The universe tears itself apart.",
+      'dd-tangent-1': {
+        title: "Splintering Reality",
+        description: "Reality begins to splinter.",
         type: 'tangent',
         effect: 'blackhole',
-        isEnding: true,
-        choices: []
+        tangentDepth: 1,
+        choices: [
+          { label: "Watch it fall apart", targetId: "dd-tangent-2" }
+        ]
+      },
+      'dd-tangent-2': {
+        title: "The Collapse",
+        description: "The tangent universe collapses.",
+        type: 'tangent',
+        effect: 'blackhole',
+        tangentDepth: 2,
+        choices: [
+          { label: "Face the end", targetId: "dd-tangent-loop" }
+        ]
+      },
+      'dd-tangent-loop': {
+        title: "Time Folds",
+        description: "Time folds. Return to October 2nd.",
+        type: 'tangent',
+        effect: 'blackhole',
+        tangentDepth: 3,
+        choices: [
+          { label: "Collapse and Rewind", targetId: "dd-root" }
+        ]
       },
       'dd-the-confrontation': {
         title: "The Final Sacrifice",

@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
 
-export default function TimelineMapOverlay({ timelineData, currentNodeId, visitedPath, closeMap }) {
-  // Extract all canonical nodes in order
+export default function TimelineMapOverlay({ timelineData, currentNodeId, visitedPath, closeMap, onNodeClick }) {
   const getCanonicalPath = () => {
     const path = [];
     let curr = timelineData.rootNode;
@@ -10,7 +9,6 @@ export default function TimelineMapOverlay({ timelineData, currentNodeId, visite
       if (node && node.type === 'canonical') {
         path.push(curr);
       }
-      // find next canonical
       const nextChoice = node.choices?.find(c => timelineData.nodes[c.targetId]?.type === 'canonical');
       curr = nextChoice ? nextChoice.targetId : null;
     }
@@ -37,7 +35,7 @@ export default function TimelineMapOverlay({ timelineData, currentNodeId, visite
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center p-8 overflow-x-auto"
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex flex-col p-8 overflow-y-auto"
       style={{
         backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
         backgroundSize: '40px 40px'
@@ -45,61 +43,93 @@ export default function TimelineMapOverlay({ timelineData, currentNodeId, visite
     >
       <button 
         onClick={closeMap}
-        className="absolute top-8 right-8 text-white/60 hover:text-white bg-white/5 hover:bg-white/10 px-6 py-2 rounded-xl border border-white/10 transition-all text-sm tracking-wide z-10"
+        className="fixed top-8 right-8 text-white/60 hover:text-white bg-white/5 hover:bg-white/10 px-6 py-2 rounded-xl border border-white/10 transition-all text-sm tracking-wide z-10"
       >
         Close Map ✕
       </button>
 
-      <div className="relative flex items-start justify-start gap-16 w-max mx-auto px-16 mt-12">
-        {/* Horizontal line connecting canonical nodes */}
-        <div className="absolute top-6 left-28 right-28 h-0.5 bg-white/10 -z-10" />
+      {/* Main Container - Items Start for left alignment of the trunk */}
+      <div className="relative flex flex-col items-start space-y-24 mx-auto w-max py-20 mt-12 pr-32">
+        {/* Vertical canonical trunk line */}
+        <div className="absolute top-20 bottom-20 left-6 w-0.5 -ml-[1px] bg-white/10 z-0" />
 
         {canonicalPath.map((nodeId, idx) => {
           const node = timelineData.nodes[nodeId];
           const isCurrent = nodeId === currentNodeId;
           const isVisited = visitedPath.includes(nodeId);
 
-          // Find tangent branches from this node
           const tangentChoices = node.choices?.filter(c => timelineData.nodes[c.targetId]?.type === 'tangent');
           const visitedTangents = tangentChoices?.filter(c => visitedPath.includes(c.targetId));
 
           return (
-            <div key={nodeId} className="relative flex flex-col items-center shrink-0 w-32">
-              {/* Canonical Node */}
-              <div 
-                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center z-10 bg-black transition-colors ${isCurrent ? 'border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.4)]' : isVisited ? 'border-white/60' : 'border-white/20'}`}
-              >
-                <div className={`w-3 h-3 rounded-full ${isCurrent ? 'bg-cyan-400' : isVisited ? 'bg-white/60' : 'bg-transparent'}`} />
-              </div>
+            <div key={nodeId} className="flex flex-row items-center relative w-full">
               
-              <div className="mt-4 text-center w-full">
+              <div className="absolute right-full mr-8 w-48 text-right">
                 <p className={`text-xs font-semibold ${isCurrent ? 'text-cyan-400' : 'text-white/60'}`}>{node.title}</p>
               </div>
 
-              {/* Visited Tangent Nodes (Parallel Track) */}
-              {visitedTangents?.map((tangent, tIdx) => {
+              {/* Canonical Node */}
+              <div 
+                onClick={() => isVisited && onNodeClick(nodeId)}
+                className={`w-12 h-12 shrink-0 rounded-full border-2 flex items-center justify-center z-10 bg-black transition-all ${isVisited ? 'cursor-pointer hover:scale-110 hover:shadow-[0_0_20px_rgba(255,255,255,0.8)]' : ''} ${isCurrent ? 'border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.4)]' : isVisited ? 'border-white/60' : 'border-white/20'}`}
+              >
+                <div className={`w-3 h-3 rounded-full ${isCurrent ? 'bg-cyan-400' : isVisited ? 'bg-white/60' : 'bg-transparent'}`} />
+              </div>
+
+              {/* Tangent Branches (Horizontal Row) */}
+              {visitedTangents?.map((tangent) => {
                 const tangentPath = getTangentPath(tangent.targetId);
                 return (
-                  <div key={tangent.targetId} className="absolute top-32 left-1/2 -ml-5 flex gap-16 z-0">
-                    {/* Horizontal connecting line for tangent track */}
-                    {tangentPath.length > 1 && (
-                      <div className="absolute top-5 left-5 right-5 h-0.5 bg-red-500/20 -z-10" />
-                    )}
-                    {/* Vertical connecting line to canonical origin */}
-                    <div className="absolute bottom-full left-5 w-0.5 h-16 bg-red-500/40" />
-
-                    {tangentPath.map((tNodeId) => {
+                  <div key={tangent.targetId} className="flex flex-row items-center">
+                    {tangentPath.map((tNodeId, tIdx) => {
                       const tangentNode = timelineData.nodes[tNodeId];
                       const isTangentCurrent = tNodeId === currentNodeId;
+                      const isLoopBack = tangentNode.choices?.some(c => c.targetId === timelineData.rootNode);
+
+                      const distanceToTrunk = 24 + (tIdx + 1) * 96 + tIdx * 40 + 20;
+
                       return (
-                        <div key={tNodeId} className="relative flex flex-col items-center shrink-0 w-32 -ml-11">
-                          <div 
-                            className={`w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 bg-black transition-colors ${isTangentCurrent ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-red-500/40'}`}
-                          >
-                            <div className={`w-2.5 h-2.5 rounded-full ${isTangentCurrent ? 'bg-red-500' : 'bg-red-500/40'}`} />
-                          </div>
-                          <div className="mt-3 text-center w-full">
-                            <p className={`text-[10px] font-semibold tracking-wide ${isTangentCurrent ? 'text-red-500' : 'text-red-500/60'}`}>{tangentNode.title}</p>
+                        <div key={tNodeId} className="flex flex-row items-center">
+                          {/* Horizontal Connector BEFORE the node */}
+                          <div className="w-24 h-[2px] bg-red-500/60 shadow-[0_0_8px_rgba(239,68,68,0.8)] z-0" />
+
+                          {/* Tangent Node */}
+                          <div className="relative flex justify-center items-center w-10 h-10">
+                            {isLoopBack && (
+                              <>
+                                {/* Loop Back 'C' Curve */}
+                                <div 
+                                  className="absolute border-t-2 border-l-2 border-b-2 border-cyan-400 rounded-l-3xl pointer-events-none z-[-1]"
+                                  style={{ 
+                                    top: `-${idx * 144 - 20}px`, 
+                                    left: `-${distanceToTrunk + 100}px`, 
+                                    width: '100px', 
+                                    height: `${idx * 144}px`,
+                                    boxShadow: '-4px 0 10px rgba(34,211,238,0.2), inset 4px 0 10px rgba(34,211,238,0.2)'
+                                  }}
+                                />
+                                {/* Loop Back Bottom Connector */}
+                                <div 
+                                  className="absolute bg-cyan-400 pointer-events-none z-[-1]"
+                                  style={{ 
+                                    top: '18px', 
+                                    left: `-${distanceToTrunk}px`, 
+                                    width: `${distanceToTrunk}px`, 
+                                    height: '2px',
+                                    boxShadow: '0 0 10px rgba(34,211,238,0.5)'
+                                  }}
+                                />
+                              </>
+                            )}
+                            <div 
+                              onClick={() => onNodeClick(tNodeId)}
+                              className={`w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 bg-black cursor-pointer hover:scale-110 hover:shadow-[0_0_20px_rgba(239,68,68,0.8)] transition-all ${isTangentCurrent ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'border-red-500/40'}`}
+                            >
+                              <div className={`w-2.5 h-2.5 rounded-full ${isTangentCurrent ? 'bg-red-500' : 'bg-red-500/40'}`} />
+                            </div>
+                            <div className="absolute top-full mt-3 w-32 text-center pointer-events-none">
+                              <p className={`text-[10px] font-semibold tracking-wide ${isTangentCurrent ? 'text-red-500' : 'text-red-500/60'}`}>{tangentNode.title}</p>
+                            </div>
                           </div>
                         </div>
                       )

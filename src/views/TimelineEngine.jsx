@@ -9,7 +9,7 @@ export default function TimelineEngine() {
   const [currentNodeId, setCurrentNodeId] = useState(timelineMatrix['donnie-darko'].rootNode)
   const [visitedPath, setVisitedPath] = useState([timelineMatrix['donnie-darko'].rootNode])
   const [showMap, setShowMap] = useState(false)
-  const currentNode = timelineMatrix['donnie-darko'].nodes[currentNodeId]
+  const currentNode = timelineMatrix['donnie-darko'].nodes[currentNodeId] || timelineMatrix['donnie-darko'].nodes[timelineMatrix['donnie-darko'].rootNode]
 
   const handleBranch = (choice) => {
     setCurrentNodeId(choice.targetId)
@@ -118,6 +118,10 @@ export default function TimelineEngine() {
           currentNodeId={currentNodeId}
           visitedPath={visitedPath}
           closeMap={() => setShowMap(false)}
+          onNodeClick={(id) => {
+            setCurrentNodeId(id);
+            setShowMap(false);
+          }}
         />
       )}
     </div>
