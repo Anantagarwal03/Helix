@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { timelineMatrix } from '../data/timelineMatrix'
 import Sidebar from '../components/layout/Sidebar'
@@ -6,10 +6,17 @@ import TimelineEffects from '../components/TimelineEffects'
 import TimelineMapOverlay from '../components/TimelineMapOverlay'
 
 export default function TimelineEngine() {
-  const [currentNodeId, setCurrentNodeId] = useState(timelineMatrix['donnie-darko'].rootNode)
-  const [visitedPath, setVisitedPath] = useState([timelineMatrix['donnie-darko'].rootNode])
+  const [activeMovieId, setActiveMovieId] = useState('donnie-darko')
+  const [currentNodeId, setCurrentNodeId] = useState(timelineMatrix[activeMovieId].rootNode)
+  const [visitedPath, setVisitedPath] = useState([timelineMatrix[activeMovieId].rootNode])
   const [showMap, setShowMap] = useState(false)
-  const currentNode = timelineMatrix['donnie-darko'].nodes[currentNodeId] || timelineMatrix['donnie-darko'].nodes[timelineMatrix['donnie-darko'].rootNode]
+
+  useEffect(() => {
+    setCurrentNodeId(timelineMatrix[activeMovieId].rootNode)
+    setVisitedPath([timelineMatrix[activeMovieId].rootNode])
+  }, [activeMovieId])
+
+  const currentNode = timelineMatrix[activeMovieId].nodes[currentNodeId] || timelineMatrix[activeMovieId].nodes[timelineMatrix[activeMovieId].rootNode]
 
   const handleBranch = (choice) => {
     setCurrentNodeId(choice.targetId)
@@ -20,8 +27,8 @@ export default function TimelineEngine() {
   }
 
   const handleReset = () => {
-    setCurrentNodeId(timelineMatrix['donnie-darko'].rootNode)
-    setVisitedPath([timelineMatrix['donnie-darko'].rootNode])
+    setCurrentNodeId(timelineMatrix[activeMovieId].rootNode)
+    setVisitedPath([timelineMatrix[activeMovieId].rootNode])
   }
 
   return (
@@ -33,36 +40,26 @@ export default function TimelineEngine() {
 
       {/* Main Content Area */}
       <div className="flex-1 relative h-full flex items-center justify-start px-16 lg:px-24">
-        {/* Full-screen Background Crossfade */}
-        <div className="absolute inset-0 overflow-hidden bg-black pointer-events-none">
-          <AnimatePresence mode="wait">
-            {currentNode.type === 'canonical' ? (
-              <motion.img
-                key={currentNodeId}
-                src={currentNode.bgImage}
-                alt="Timeline Background"
-                className="absolute inset-0 w-full h-full object-cover"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.3 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.5 }}
-              />
-            ) : (
-              <motion.div
-                key={currentNodeId}
-                className="absolute inset-0"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.5 }}
-              >
-                <TimelineEffects effect={currentNode.effect} tangentDepth={currentNode.tangentDepth || 1} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {/* Gradient overlay for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent" />
+        <div className="absolute top-8 right-16 z-50 flex gap-3">
+          <button onClick={() => setActiveMovieId('donnie-darko')} className={`px-4 py-2 rounded-xl border text-xs font-medium transition-all ${activeMovieId === 'donnie-darko' ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'}`}>Donnie Darko</button>
+          <button onClick={() => setActiveMovieId('the-sixth-sense')} className={`px-4 py-2 rounded-xl border text-xs font-medium transition-all ${activeMovieId === 'the-sixth-sense' ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'}`}>The Sixth Sense</button>
+          <button onClick={() => setActiveMovieId('zodiac')} className={`px-4 py-2 rounded-xl border text-xs font-medium transition-all ${activeMovieId === 'zodiac' ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'}`}>Zodiac</button>
         </div>
+        {currentNode.type === 'tangent' ? (
+          <div className="fixed inset-0 z-0 pointer-events-none">
+            <TimelineEffects effect={currentNode.effect} tangentDepth={currentNode.tangentDepth || 1} />
+          </div>
+        ) : (
+          <div className="fixed inset-0 z-0 bg-[#020205] overflow-hidden flex items-center justify-center pointer-events-none">
+            <div className="absolute w-[800px] h-[800px] rounded-full blur-[120px] bg-cyan-900/20 animate-pulse" style={{ animationDuration: '6s' }} />
+            <div className="relative w-[30rem] h-[30rem] rounded-full border-[1px] border-cyan-500/20 shadow-[0_0_80px_rgba(6,182,212,0.15)] animate-[spin_30s_linear_infinite] flex items-center justify-center">
+              <div className="absolute w-[24rem] h-[24rem] rounded-full border border-blue-400/20 animate-[spin_20s_linear_infinite_reverse]" />
+              <div className="absolute w-[18rem] h-[18rem] rounded-full border border-indigo-500/10 animate-[spin_10s_linear_infinite]" />
+              <div className="absolute w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
+              <div className="absolute h-full w-[1px] bg-gradient-to-b from-transparent via-blue-400/20 to-transparent" />
+            </div>
+          </div>
+        )}
 
         {/* Floating Glassmorphic Overlay */}
         <div className="relative z-10 w-full max-w-lg bg-black/40 backdrop-blur-xl border border-white/10 p-10 rounded-3xl shadow-2xl flex flex-col gap-6">
@@ -114,7 +111,7 @@ export default function TimelineEngine() {
 
       {showMap && (
         <TimelineMapOverlay 
-          timelineData={timelineMatrix['donnie-darko']}
+          timelineData={timelineMatrix[activeMovieId]}
           currentNodeId={currentNodeId}
           visitedPath={visitedPath}
           closeMap={() => setShowMap(false)}

@@ -9,8 +9,16 @@ export const timelineMatrix = {
         bgImage: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=2000&q=80",
         choices: [
           { label: "Follow the voice (Frank)", targetId: "dd-tangent-active" },
-          { label: "Ignore it and stay in bed", targetId: "dd-tangent-start" }
+          { label: "Ignore it and stay in bed", targetId: "dd-tangent-death" }
         ]
+      },
+      'dd-tangent-death': {
+        title: "Paradox Death",
+        description: "Donnie ignores the voice. The jet engine crushes him. Without a Living Receiver, the Primary Universe continues, but the Artifact creates a localized time loop paradox.",
+        type: 'tangent',
+        effect: 'blackhole',
+        isEnding: true,
+        choices: []
       },
       'dd-tangent-start': {
         title: "The Unstable Timeline",
@@ -81,8 +89,26 @@ export const timelineMatrix = {
         bgImage: "https://images.unsplash.com/photo-1505364841922-386b1603ba7d?auto=format&fit=crop&w=2000&q=80",
         choices: [
           { label: "Go to Grandma Death's cellar", targetId: "dd-the-confrontation" },
-          { label: "Stay at the party and wait", targetId: "dd-tangent-1" }
+          { label: "Stay at the party and wait", targetId: "dd-tangent-1" },
+          { label: "Flee town with Gretchen", targetId: "dd-tangent-flee" }
         ]
+      },
+      'dd-tangent-flee': {
+        title: "The Escape Attempt",
+        description: "Donnie tries to drive Gretchen out of Middlesex. The storm intensifies, forming a massive tornado barrier around the town.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: [
+          { label: "Drive into the storm", targetId: "dd-tangent-flee-2" }
+        ]
+      },
+      'dd-tangent-flee-2': {
+        title: "Trapped in the Tangent",
+        description: "The car is flipped. Gretchen dies, and Donnie is left trapped in the collapsing reality.",
+        type: 'tangent',
+        effect: 'blackhole',
+        isEnding: true,
+        choices: []
       },
       'dd-tangent-1': {
         title: "Splintering Reality",
@@ -119,6 +145,102 @@ export const timelineMatrix = {
         description: "Gretchen is killed. Donnie shoots Frank in the eye, completing the loop. Armed with telekinesis, he tears the jet engine from the sky and sends it back to the primary universe, restoring order at the cost of his own life.",
         type: 'canonical',
         bgImage: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=2000&q=80",
+        isEnding: true,
+        choices: []
+      }
+    }
+  },
+  'the-sixth-sense': {
+    rootNode: 'session-1',
+    nodes: {
+      'session-1': {
+        title: "Treating Cole Sear",
+        description: "Malcolm begins treating Cole, a boy who claims to see ghosts.",
+        type: 'canonical',
+        choices: [
+          { label: "Believe his secret", targetId: 'the-secret' },
+          { label: "Dismiss it as trauma", targetId: 'tangent-dismissal' }
+        ]
+      },
+      'tangent-dismissal': {
+        title: "A Failed Doctor",
+        description: "Malcolm abandons Cole. Cole's condition worsens. Malcolm's lingering spirit becomes a malevolent poltergeist.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: []
+      },
+      'the-secret': {
+        title: "I See Dead People",
+        description: "Cole reveals his secret. Malcolm decides to help him rather than run.",
+        type: 'canonical',
+        choices: [
+          { label: "Help the ghost in the house", targetId: 'kyras-tape' },
+          { label: "Run away", targetId: 'tangent-cowardice' }
+        ]
+      },
+      'tangent-cowardice': {
+        title: "Running Away",
+        description: "Cole runs away. The timeline is abandoned.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: []
+      },
+      'kyras-tape': {
+        title: "The Tape Recording",
+        description: "Cole helps Kyra's spirit reveal the truth.",
+        type: 'canonical',
+        choices: [
+          { label: "Attend the school play", targetId: 'the-revelation' }
+        ]
+      },
+      'the-revelation': {
+        title: "The Final Truth",
+        description: "Malcolm looks at the ring dropping. He realizes he has been dead the entire time.",
+        type: 'canonical',
+        isEnding: true,
+        choices: []
+      }
+    }
+  },
+  'zodiac': {
+    rootNode: 'the-first-cipher',
+    nodes: {
+      'the-first-cipher': {
+        title: "The Chronicle Letter",
+        description: "The killer sends a cipher to the Chronicle.",
+        type: 'canonical',
+        choices: [
+          { label: "Graysmith decodes it", targetId: 'the-basement' },
+          { label: "Leave it to the police", targetId: 'tangent-unsolved' }
+        ]
+      },
+      'tangent-unsolved': {
+        title: "Fading into Obscurity",
+        description: "Graysmith stays a cartoonist. The Zodiac is forgotten, leaving a permanent gap in historical reality.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: []
+      },
+      'the-basement': {
+        title: "Vaughn's Basement",
+        description: "Graysmith investigates Vaughn's basement with the movie posters.",
+        type: 'canonical',
+        choices: [
+          { label: "Flee the house", targetId: 'the-hardware-store' },
+          { label: "Investigate the posters", targetId: 'tangent-basement-death' }
+        ]
+      },
+      'tangent-basement-death': {
+        title: "Trapped Underground",
+        description: "Graysmith digs too deep and is trapped by Bob Vaughn. The timeline collapses.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: []
+      },
+      'the-hardware-store': {
+        title: "The Hardware Store",
+        description: "Graysmith looks Arthur Leigh Allen directly in the eyes. He knows.",
+        type: 'canonical',
         isEnding: true,
         choices: []
       }
