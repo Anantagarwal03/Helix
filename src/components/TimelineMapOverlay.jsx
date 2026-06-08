@@ -1,134 +1,84 @@
-import { motion } from 'framer-motion'
+import React from 'react'
 
 export default function TimelineMapOverlay({ timelineData, currentNodeId, visitedPath, closeMap, onNodeClick }) {
-  const getCanonicalPath = () => {
-    const path = [];
-    let curr = timelineData.rootNode;
-    while (curr) {
-      const node = timelineData.nodes[curr];
-      if (node && node.type === 'canonical') {
-        path.push(curr);
-      }
-      const nextChoice = node.choices?.find(c => timelineData.nodes[c.targetId]?.type === 'canonical');
-      curr = nextChoice ? nextChoice.targetId : null;
-    }
-    return path;
-  }
+  const allNodes = Object.entries(timelineData.nodes).map(([id, data]) => ({
+    id,
+    ...data,
+    isCurrent: id === currentNodeId,
+    isVisited: visitedPath.includes(id)
+  }));
 
-  const getTangentPath = (startTangentId) => {
-    const path = [];
-    let curr = startTangentId;
-    while (curr && visitedPath.includes(curr)) {
-      const node = timelineData.nodes[curr];
-      if (node && node.type === 'tangent') {
-        path.push(curr);
-        const nextChoice = node.choices?.find(c => timelineData.nodes[c.targetId]?.type === 'tangent');
-        curr = nextChoice ? nextChoice.targetId : null;
-      } else {
-        break;
-      }
-    }
-    return path;
-  }
-
-  const canonicalPath = getCanonicalPath();
+  const canonicalNodes = allNodes.filter(n => n.type === 'canonical');
+  const tangentNodes = allNodes.filter(n => n.type === 'tangent');
 
   return (
-    <div 
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex flex-col p-8 overflow-y-auto"
-      style={{
-        backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.05) 0%, transparent 50%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
-        backgroundSize: '100% 100%, 40px 40px, 40px 40px'
-      }}
-    >
-      <button 
-        onClick={closeMap}
-        className="fixed top-8 right-8 text-white/60 hover:text-white bg-white/5 hover:bg-white/10 px-6 py-2 rounded-xl border border-white/10 transition-all text-sm tracking-wide z-20"
-      >
-        Close Map ✕
-      </button>
+    <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-2xl flex flex-col text-white p-8 overflow-y-auto">
+      <div className="flex items-center justify-between border-b border-white/10 pb-6 mb-8 max-w-5xl w-full mx-auto">
+        <div>
+          <h3 className="text-xl font-bold text-cyan-400 tracking-tight">Chronological Index</h3>
+          <p className="text-xs text-slate-400 mt-1">Select any unlocked point to navigate through space-time tracks.</p>
+        </div>
+        <button 
+          onClick={closeMap}
+          className="bg-white/5 hover:bg-white/10 px-5 py-2 rounded-xl border border-white/10 text-xs font-medium transition-all"
+        >
+          Close View ✕
+        </button>
+      </div>
 
-      {/* Main Container */}
-      <div className="relative flex flex-col items-start space-y-24 mx-auto w-max py-20 mt-12 pr-48 min-h-screen">
-        
-        {/* Main Trunk Line - perfectly centered on the canonical nodes (60px from the left of the min-w-[120px] container) */}
-        <div className="absolute top-20 bottom-20 left-[60px] w-[2px] bg-white/20 z-0" />
-
-        {canonicalPath.map((nodeId) => {
-          const node = timelineData.nodes[nodeId];
-          const isCurrent = nodeId === currentNodeId;
-          const isVisited = visitedPath.includes(nodeId);
-
-          const tangentChoices = node.choices?.filter(c => timelineData.nodes[c.targetId]?.type === 'tangent');
-          const hasTangent = tangentChoices && tangentChoices.length > 0;
-          const visitedTangents = tangentChoices?.filter(c => visitedPath.includes(c.targetId));
-
-          return (
-            <div key={nodeId} className={`flex flex-row items-center relative w-full transition-opacity duration-500 ${!isVisited ? 'opacity-50' : 'opacity-100'}`}>
-              
-              {/* Canonical Node Container */}
-              <div className="flex flex-col items-center justify-center relative min-w-[120px]">
-                {/* Divergence Indicator Ring */}
-                {hasTangent && (
-                  <div className="absolute top-[24px] left-[50%] -translate-x-1/2 -translate-y-1/2 border border-red-500/30 rounded-full pointer-events-none w-[60px] h-[60px]" />
-                )}
-                
-                <div 
-                  onClick={() => isVisited && onNodeClick(nodeId)}
-                  className={`w-12 h-12 rounded-full border-2 flex items-center justify-center z-10 bg-black transition-all ${isVisited ? 'cursor-pointer hover:scale-110 hover:shadow-[0_0_20px_rgba(255,255,255,0.8)]' : ''} ${isCurrent ? 'border-cyan-400 shadow-[0_0_15px_cyan]' : isVisited ? 'border-white/60' : 'border-white/20'}`}
-                >
-                  <div className={`w-3 h-3 rounded-full ${isCurrent ? 'bg-cyan-400' : isVisited ? 'bg-white/60' : 'bg-transparent'}`} />
-                </div>
-
-                {/* Locked Text Label */}
-                <div className="absolute top-12 mt-2 text-xs text-slate-400 whitespace-nowrap text-center px-2">
-                  <p className={`font-semibold ${isCurrent ? 'text-cyan-400' : ''}`}>{node.title}</p>
-                </div>
+      <div className="max-w-5xl w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="space-y-4">
+          <h4 className="text-xs font-bold uppercase tracking-widest text-cyan-500 border-l-2 border-cyan-500 pl-3 mb-6">Canonical Nexus Path</h4>
+          {canonicalNodes.map((node) => (
+            <div 
+              key={node.id}
+              onClick={() => node.isVisited && onNodeClick(node.id)}
+              className={`p-5 rounded-2xl border transition-all duration-300 text-left ${
+                node.isCurrent 
+                  ? 'bg-cyan-950/30 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.15)] ring-1 ring-cyan-400/30' 
+                  : node.isVisited 
+                    ? 'bg-slate-900/40 border-cyan-500/20 cursor-pointer hover:border-cyan-400/50 hover:-translate-y-0.5 hover:bg-slate-900/60' 
+                    : 'bg-zinc-900/10 border-zinc-900/40 opacity-30 select-none pointer-events-none'
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className={`w-2.5 h-2.5 rounded-full ${node.isCurrent ? 'bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse' : node.isVisited ? 'bg-cyan-500/70' : 'bg-slate-700'}`} />
+                <h5 className={`text-sm font-bold tracking-wide ${node.isCurrent ? 'text-cyan-400' : 'text-slate-200'}`}>{node.title}</h5>
               </div>
-
-              {/* Tangent Branches (Strict Horizontal Flex) */}
-              {visitedTangents?.map((tangent) => {
-                const tangentPath = getTangentPath(tangent.targetId);
-                return (
-                  <div key={tangent.targetId} className="flex flex-row items-center">
-                    {/* Initial Connector */}
-                    <div className="w-12 h-[2px] bg-red-500 shadow-[0_0_8px_red] shrink-0" />
-                    
-                    <div className="flex flex-row items-center">
-                      {tangentPath.map((tNodeId, tIdx) => {
-                        const tangentNode = timelineData.nodes[tNodeId];
-                        const isTangentCurrent = tNodeId === currentNodeId;
-
-                        return (
-                          <div key={tNodeId} className="flex flex-row items-center">
-                            {/* Inner Connectors */}
-                            {tIdx > 0 && <div className="w-12 h-[2px] bg-red-500 shadow-[0_0_8px_red] shrink-0 mx-2" />}
-
-                            {/* Tangent Node Container */}
-                            <div className="flex flex-col items-center justify-center relative min-w-[120px]">
-                              <div 
-                                onClick={() => onNodeClick(tNodeId)}
-                                className={`w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 bg-black cursor-pointer hover:scale-110 hover:shadow-[0_0_20px_rgba(239,68,68,0.8)] transition-all ${isTangentCurrent ? 'border-red-500 shadow-[0_0_15px_red]' : 'border-red-500/40'}`}
-                              >
-                                <div className={`w-2.5 h-2.5 rounded-full ${isTangentCurrent ? 'bg-red-500' : 'bg-red-500/40'}`} />
-                              </div>
-                              
-                              {/* Locked Text Label */}
-                              <div className="absolute top-10 whitespace-nowrap text-xs text-center px-2 mt-2">
-                                <p className={`font-semibold tracking-wide ${isTangentCurrent ? 'text-red-500' : 'text-red-500/60'}`}>{tangentNode.title}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
+              <p className="text-xs text-slate-400 leading-relaxed pl-5.5">{node.description}</p>
             </div>
-          )
-        })}
+          ))}
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="text-xs font-bold uppercase tracking-widest text-red-500 border-l-2 border-red-500 pl-3 mb-6">Divergent What-If Tangents</h4>
+          {tangentNodes.length === 0 ? (
+            <div className="p-6 rounded-2xl bg-white/5 border border-white/5 text-center text-xs text-slate-500 italic">
+              No timeline deviations triggered for this sequence map.
+            </div>
+          ) : (
+            tangentNodes.map((node) => (
+              <div 
+                key={node.id}
+                onClick={() => node.isVisited && onNodeClick(node.id)}
+                className={`p-5 rounded-2xl border transition-all duration-300 text-left ${
+                  node.isCurrent 
+                    ? 'bg-red-950/20 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.15)] ring-1 ring-red-500/30' 
+                    : node.isVisited 
+                      ? 'bg-slate-900/40 border-red-500/20 cursor-pointer hover:border-red-400/50 hover:-translate-y-0.5 hover:bg-slate-900/60' 
+                      : 'bg-zinc-900/10 border-zinc-900/40 opacity-30 select-none pointer-events-none'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${node.isCurrent ? 'bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse' : node.isVisited ? 'bg-red-500/70' : 'bg-slate-700'}`} />
+                  <h5 className={`text-sm font-bold tracking-wide ${node.isCurrent ? 'text-red-400' : 'text-slate-200'}`}>{node.title}</h5>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed pl-5.5">{node.description}</p>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
-  )
+  );
 }

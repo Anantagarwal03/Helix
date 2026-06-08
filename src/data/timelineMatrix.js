@@ -90,8 +90,15 @@ export const timelineMatrix = {
         choices: [
           { label: "Go to Grandma Death's cellar", targetId: "dd-the-confrontation" },
           { label: "Stay at the party and wait", targetId: "dd-tangent-1" },
+          { label: "Call the police immediately", targetId: "tangent-police" },
           { label: "Flee town with Gretchen", targetId: "dd-tangent-flee" }
         ]
+      },
+      'tangent-police': {
+        title: "Police Intervention",
+        description: "The police arrive early. The fight is broken up, but Donnie never realizes his true purpose. Reality collapses slowly.",
+        type: 'tangent',
+        choices: [{ label: "Reality collapses. Wake up.", targetId: "dd-root" }]
       },
       'dd-tangent-flee': {
         title: "The Escape Attempt",
@@ -107,8 +114,7 @@ export const timelineMatrix = {
         description: "The car is flipped. Gretchen dies, and Donnie is left trapped in the collapsing reality.",
         type: 'tangent',
         effect: 'blackhole',
-        isEnding: true,
-        choices: []
+        choices: [{ label: "Reality collapses. Wake up.", targetId: "dd-root" }]
       },
       'dd-tangent-1': {
         title: "Splintering Reality",
@@ -145,8 +151,7 @@ export const timelineMatrix = {
         description: "Gretchen is killed. Donnie shoots Frank in the eye, completing the loop. Armed with telekinesis, he tears the jet engine from the sky and sends it back to the primary universe, restoring order at the cost of his own life.",
         type: 'canonical',
         bgImage: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=2000&q=80",
-        isEnding: true,
-        choices: []
+        choices: [{ label: "Reality collapses. Wake up.", targetId: "dd-root" }]
       }
     }
   },
@@ -155,91 +160,138 @@ export const timelineMatrix = {
     nodes: {
       'session-1': {
         title: "Treating Cole Sear",
-        description: "Malcolm begins treating Cole, a boy who claims to see ghosts.",
+        description: "Malcolm meets a terrified boy who claims to see the deceased. He must choose how to approach the diagnosis.",
         type: 'canonical',
         choices: [
-          { label: "Believe his secret", targetId: 'the-secret' },
-          { label: "Dismiss it as trauma", targetId: 'tangent-dismissal' }
+          { label: "Validate his reality", targetId: "the-secret" },
+          { label: "Medicate heavily", targetId: "tangent-medication" },
+          { label: "Transfer patient to another doctor", targetId: "tangent-transfer" }
         ]
       },
-      'tangent-dismissal': {
-        title: "A Failed Doctor",
-        description: "Malcolm abandons Cole. Cole's condition worsens. Malcolm's lingering spirit becomes a malevolent poltergeist.",
+      'tangent-transfer': {
+        title: "A Tragic Handoff",
+        description: "Malcolm hands Cole to another therapist. Cole's condition deteriorates, and Malcolm is left wandering forever, never realizing his true state.",
         type: 'tangent',
         effect: 'blackhole',
-        choices: []
+        choices: [{ label: "Reality collapses. Restart session.", targetId: "session-1" }]
+      },
+      'tangent-medication': {
+        title: "The Chemical Veil",
+        description: "Cole is heavily medicated. The spirits vanish, but his connection to the living world fades. Malcolm never uncovers his own truth.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: [{ label: "Reality collapses. Restart session.", targetId: "session-1" }]
       },
       'the-secret': {
         title: "I See Dead People",
-        description: "Cole reveals his secret. Malcolm decides to help him rather than run.",
+        description: "Cole confides his terrifying secret to Malcolm. A young ghost named Kyra appears in Cole's room seeking help.",
         type: 'canonical',
         choices: [
-          { label: "Help the ghost in the house", targetId: 'kyras-tape' },
-          { label: "Run away", targetId: 'tangent-cowardice' }
+          { label: "Urge Cole to investigate her death", targetId: "kyras-wake" },
+          { label: "Advise Cole to ignore and suppress her", targetId: "tangent-haunting" }
         ]
       },
-      'tangent-cowardice': {
-        title: "Running Away",
-        description: "Cole runs away. The timeline is abandoned.",
+      'tangent-haunting': {
+        title: "Unfinished Business",
+        description: "Kyra's spirit grows malicious from neglect. The house becomes host to an aggressive haunting, trapping Cole in a cycle of terror.",
         type: 'tangent',
         effect: 'blackhole',
-        choices: []
+        choices: [{ label: "Reality collapses. Restart session.", targetId: "session-1" }]
       },
-      'kyras-tape': {
-        title: "The Tape Recording",
-        description: "Cole helps Kyra's spirit reveal the truth.",
+      'kyras-wake': {
+        title: "The Kyra Manifestation",
+        description: "Cole slips into Kyra's wake and retrieves a hidden videotape proving her stepmother poisoned her.",
         type: 'canonical',
         choices: [
-          { label: "Attend the school play", targetId: 'the-revelation' }
+          { label: "Hand the tape to the father publicly", targetId: "the-exposure" },
+          { label: "Confront the stepmother privately", targetId: "tangent-retaliation" }
+        ]
+      },
+      'tangent-retaliation': {
+        title: "Silence in the Suburbs",
+        description: "The stepmother destroys the evidence and frames Cole for theft. Malcolm's window of closure slams shut.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: [{ label: "Reality collapses. Restart session.", targetId: "session-1" }]
+      },
+      'the-exposure': {
+        title: "Truth Unleashed",
+        description: "The tape plays. The murder is exposed. Kyra's soul finds peace, liberating Cole's burden. Now, Malcolm must confront his own cold distance from his wife.",
+        type: 'canonical',
+        choices: [
+          { label: "Return home to fix his marriage", targetId: "the-revelation" }
         ]
       },
       'the-revelation': {
-        title: "The Final Truth",
-        description: "Malcolm looks at the ring dropping. He realizes he has been dead the entire time.",
+        title: "The Wedding Ring Falls",
+        description: "Malcolm watches his wife drop his gold band. He looks down at his blood-soaked shirt. The timeline closes as he finds acceptance.",
         type: 'canonical',
-        isEnding: true,
-        choices: []
+        choices: [{ label: "Reality collapses. Wake up.", targetId: "session-1" }]
       }
     }
   },
   'zodiac': {
-    rootNode: 'the-first-cipher',
+    rootNode: 'the-chronicle-letter',
     nodes: {
-      'the-first-cipher': {
-        title: "The Chronicle Letter",
-        description: "The killer sends a cipher to the Chronicle.",
+      'the-chronicle-letter': {
+        title: "The Cipher Arrives",
+        description: "The San Francisco Chronicle receives an encrypted letter from a killer. Robert Graysmith studies the cryptogram.",
         type: 'canonical',
         choices: [
-          { label: "Graysmith decodes it", targetId: 'the-basement' },
-          { label: "Leave it to the police", targetId: 'tangent-unsolved' }
+          { label: "Decode manually", targetId: "vaughns-lead" },
+          { label: "Give to Bureaucracy", targetId: "tangent-cold-case" },
+          { label: "Publish unedited immediately", targetId: "tangent-panic" }
         ]
       },
-      'tangent-unsolved': {
-        title: "Fading into Obscurity",
-        description: "Graysmith stays a cartoonist. The Zodiac is forgotten, leaving a permanent gap in historical reality.",
+      'tangent-panic': {
+        title: "City in Panic",
+        description: "The raw letter causes mass hysteria. The killer changes his pattern entirely, slipping through the fingers of the SFPD forever.",
         type: 'tangent',
         effect: 'blackhole',
-        choices: []
+        choices: [{ label: "Reality collapses. Return to the letter.", targetId: "the-chronicle-letter" }]
       },
-      'the-basement': {
-        title: "Vaughn's Basement",
-        description: "Graysmith investigates Vaughn's basement with the movie posters.",
+      'tangent-cold-case': {
+        title: "The Bureaucratic Abyss",
+        description: "The code sits in federal archives for decades. The trail goes cold immediately, and the killer vanishes seamlessly into history.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: [{ label: "Reality collapses. Return to the letter.", targetId: "the-chronicle-letter" }]
+      },
+      'vaughns-lead': {
+        title: "The Film Poster Clue",
+        description: "Graysmith's obsession leads him to Bob Vaughn's house, a theater organist who may hold matching handwriting samples.",
         type: 'canonical',
         choices: [
-          { label: "Flee the house", targetId: 'the-hardware-store' },
-          { label: "Investigate the posters", targetId: 'tangent-basement-death' }
+          { label: "Follow Vaughn down into his dark basement", targetId: "tangent-basement-trap" },
+          { label: "Excuse himself and track Vallejo records", targetId: "vallejo-records" }
         ]
       },
-      'tangent-basement-death': {
-        title: "Trapped Underground",
-        description: "Graysmith digs too deep and is trapped by Bob Vaughn. The timeline collapses.",
+      'tangent-basement-trap': {
+        title: "The Basement Dead End",
+        description: "The floorboards creak upstairs. Graysmith realizes too late he walked into an isolated trap. He becomes another ghost in the investigation.",
         type: 'tangent',
         effect: 'blackhole',
-        choices: []
+        choices: [{ label: "Reality collapses. Return to the letter.", targetId: "the-chronicle-letter" }]
+      },
+      'vallejo-records': {
+        title: "The Arthur Leigh Allen File",
+        description: "Graysmith uncovers a matching palm print and matching watch brand name from a prime suspect in Vallejo.",
+        type: 'canonical',
+        choices: [
+          { label: "Confront the suspect at the hardware store", targetId: "the-hardware-store" },
+          { label: "Leake the address to vigilantes", targetId: "tangent-mistrial" }
+        ]
+      },
+      'tangent-mistrial': {
+        title: "Contaminated Justice",
+        description: "A premature confrontation ruins the legal chain of custody. The suspect beats the charges on a technicality.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: [{ label: "Reality collapses. Return to the letter.", targetId: "the-chronicle-letter" }]
       },
       'the-hardware-store': {
-        title: "The Hardware Store",
-        description: "Graysmith looks Arthur Leigh Allen directly in the eyes. He knows.",
+        title: "The Final Gaze",
+        description: "Graysmith walks into the Vallejo hardware store. He locks eyes with Arthur Leigh Allen. No words are spoken. Total closure achieved.",
         type: 'canonical',
         isEnding: true,
         choices: []
