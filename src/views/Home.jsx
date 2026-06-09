@@ -7,6 +7,7 @@ import Sidebar        from '../components/layout/Sidebar'
 import HeroSection    from '../sections/HeroSection'
 import GraphSection   from '../sections/GraphSection'
 import LibrarySection from '../sections/LibrarySection'
+import { playTransitionSound } from '../utils/audio'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -36,6 +37,7 @@ export default function Home() {
     
     isScrolling.current = true
     setActiveSection(index)
+    playTransitionSound()
     
     gsap.to(scroller, {
       scrollTop: index * window.innerHeight,
