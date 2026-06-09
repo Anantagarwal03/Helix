@@ -31,7 +31,10 @@ export default function Home() {
   const scrollToSection = useCallback((index) => {
     const scroller = scrollerRef.current
     if (!scroller) return
+    
     isScrolling.current = true
+    setActiveSection(index)
+    
     gsap.to(scroller, {
       scrollTop: index * window.innerHeight,
       duration: 0.9,
@@ -50,9 +53,14 @@ export default function Home() {
     if (location.state?.scrollToSection !== undefined) {
       const targetSection = Number(location.state.scrollToSection)
       setActiveSection(targetSection)
-      if (typeof scrollToSection === 'function') {
-        scrollToSection(targetSection)
-      }
+      
+      const animationTimeout = setTimeout(() => {
+        if (typeof scrollToSection === 'function') {
+          scrollToSection(targetSection)
+        }
+      }, 150)
+      
+      return () => clearTimeout(animationTimeout)
     }
   }, [location.state, scrollToSection])
 
