@@ -8,19 +8,16 @@
  *  - DecryptedText cipher-reveal inside side panel
  *  - Event table row highlighting synced to active node
  */
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import GlitchText    from '../components/animations/GlitchText'
 import DecryptedText from '../components/animations/DecryptedText'
 import TwistGraph3D, { INITIAL_GRAPH_DATA } from '../components/TwistGraph3D'
+import { MOVIES } from '../data/movies'
 
 const FILM_COLOR = { ss:'#00f2fe', dd:'#8b5cf6', z:'#ec4899' }
 const FILM_NAME  = { ss:'The Sixth Sense', dd:'Donnie Darko', z:'Zodiac' }
 
-const EVENTS = [
-  { film:'ss', filmName:'The Sixth Sense', char:'Malcolm Crowe',  event:'Identity Reveal',     color:'#00f2fe', nodeIds:['ss-twist','ss-malcolm','ss-e1','ss-e2'] },
-  { film:'dd', filmName:'Donnie Darko',    char:'Donnie Darko',   event:'Tangent Universe',     color:'#8b5cf6', nodeIds:['dd-twist','dd-donnie','dd-e1','dd-e2'] },
-  { film:'z',  filmName:'Zodiac',          char:'R. Graysmith',   event:'Final Confrontation',  color:'#ec4899', nodeIds:['z-twist','z-gray','z-e1','z-e2']      },
-]
+// EVENTS array is now generated dynamically inside GraphSection
 
 // ── Floating Side Panel ──────────────────────────────────────────────────
 const SideRevealPanel = ({ node, onClose }) => {
@@ -197,10 +194,43 @@ const GraphSection = ({ initialNode }) => {
   const [mounted,      setMounted]      = useState(false)
   const [selectedNode, setSelectedNode] = useState(null)
   const [graphData,    setGraphData]    = useState(INITIAL_GRAPH_DATA)
+  const [movies,       setMovies]       = useState(MOVIES)
+  const EVENTS = movies.map(m => ({
+    film: m.id,
+    filmName: m.title,
+    char: m.director,
+    event: m.complexity || m.twistType || 'Mind-Bend Twist',
+    color: m.accentColor || '#8b5cf6',
+    nodeIds: [m.id + '-twist']
+  }))
 
   const handleGraphMount = useCallback(() => setMounted(true), [])
   const handleNodeClick  = useCallback(node => setSelectedNode(node), [])
   const closePanel       = useCallback(() => setSelectedNode(null), [])
+  const graphRef         = useRef(null)
+
+  const handleTableNodeTarget = (filmSlugId) => {
+    const graphInstance = graphRef.current;
+    if (!graphInstance) return;
+
+    // Query internal graph nodes to isolate the main target film hub
+    const targetHub = graphData.nodes.find(node => node.id === filmSlugId && node.type === 'film');
+    if (!targetHub) return;
+
+    // Smoothly position the 3D space camera right in front of the selected sphere coordinate
+    const viewDistance = 130;
+    const vectorAngle = Math.atan2(targetHub.z || 0, targetHub.x || 0);
+
+    graphInstance.cameraPosition(
+      {
+        x: (targetHub.x || 0) + viewDistance * Math.cos(vectorAngle),
+        y: (targetHub.y || 0) + 35,
+        z: (targetHub.z || 0) + viewDistance * Math.sin(vectorAngle)
+      },
+      { x: targetHub.x || 0, y: targetHub.y || 0, z: targetHub.z || 0 },
+      1000 // Animate over exactly 1 second
+    );
+  };
 
   const highlightedRow = selectedNode
     ? EVENTS.findIndex(e => e.nodeIds.includes(selectedNode.id))
@@ -244,7 +274,7 @@ const GraphSection = ({ initialNode }) => {
         {/* Stats HUD */}
         <div className="absolute top-3 right-3 z-10 flex items-center gap-3 px-3 py-1.5 rounded-lg"
           style={{ background:'rgba(3,0,20,0.65)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.05)' }}>
-          {[['22','nodes'],['31','links'],['3','films']].map(([v,l]) => (
+          {[['22','nodes'],['31','links'],[`${movies.length}`,'films']].map(([v,l]) => (
             <div key={l} className="text-center">
               <p className="text-[12px] font-bold text-white/80 tabular-nums leading-none">{v}</p>
               <p className="text-[9px] font-mono text-slate-700 uppercase tracking-wide mt-0.5">{l}</p>
@@ -272,7 +302,7 @@ const GraphSection = ({ initialNode }) => {
         </div>
 
         {/* Live 3D graph */}
-        <TwistGraph3D graphData={graphData} onMount={handleGraphMount} onNodeClick={handleNodeClick} initialNode={initialNode} />
+        <TwistGraph3D ref={graphRef} graphData={graphData} movies={movies} onMount={handleGraphMount} onNodeClick={handleNodeClick} initialNode={initialNode} />
       </div>
 
       {/* Event Index table */}
@@ -282,7 +312,7 @@ const GraphSection = ({ initialNode }) => {
             style={{ borderBottom:'0.5px solid rgba(255,255,255,0.04)' }}>
             <div className="flex items-center gap-2">
               <h3 className="text-[11.5px] font-semibold text-white/70 tracking-tight">Twist Events</h3>
-              <span className="text-[10px] font-mono text-slate-400">· 3 films · 22 nodes · 31 links</span>
+              <span className="text-[10px] font-mono text-slate-400">· {movies.length} films · 22 nodes · 31 links</span>
             </div>
             <button className="text-[10.5px] font-mono text-slate-300 hover:text-white transition-colors">Full table →</button>
           </div>
@@ -290,7 +320,8 @@ const GraphSection = ({ initialNode }) => {
             const hi = highlightedRow === i
             return (
               <div key={i}
-                className="flex items-center gap-4 px-4 py-2 transition-all duration-200"
+                className="flex items-center gap-4 px-4 py-2 cursor-pointer hover:bg-white/5 transition-all animate-none"
+                onClick={() => handleTableNodeTarget(row.filmName.toLowerCase().replace(/\s+/g, '-'))}
                 style={{
                   borderBottom: i < EVENTS.length-1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none',
                   background: hi ? `${row.color}08` : 'transparent',

@@ -1,12 +1,125 @@
 {
   "movies": [
-    { "id": "donnie-darko", "title": "Donnie Darko", "director": "Richard Kelly" }
+    { "id": "donnie-darko", "title": "Donnie Darko", "director": "Richard Kelly", "year": 2001, "complexity": "High" },
+    { "id": "sixth-sense", "title": "The Sixth Sense", "director": "M. Night Shyamalan", "year": 1999, "complexity": "Medium" },
+    { "id": "taxi-driver", "title": "Taxi Driver", "director": "Martin Scorsese", "year": 1976, "complexity": "Medium" },
+    { "id": "oldboy", "title": "Oldboy", "director": "Park Chan-wook", "year": 2003, "complexity": "Critical" },
+    { "id": "zodiac", "title": "Zodiac", "director": "David Fincher", "year": 2007, "complexity": "High" }
   ],
   "timelines": {
     "donnie-darko": {
       "rootNode": "start",
       "nodes": {
-        "start": { "title": "Tangent Universe Alignment", "description": "Artifact drop detected." }
+        "start": {
+          "title": "Tangent Universe Alignment",
+          "description": "Artifact drop detected. Primary timeline split initiated.",
+          "choices": [
+            { "label": "Accept the 28-day countdown", "targetId": "accept" },
+            { "label": "Resist the predetermined path", "targetId": "resist" }
+          ]
+        },
+        "accept": {
+          "title": "The Artifact Returns",
+          "description": "Donnie stays in his bed and accepts the engine drop, closing the loop.",
+          "isEnding": true
+        },
+        "resist": {
+          "title": "Timeline Collapse",
+          "description": "The tangent universe destabilizes and consumes reality.",
+          "isEnding": true
+        }
+      }
+    },
+    "sixth-sense": {
+      "rootNode": "start",
+      "nodes": {
+        "start": {
+          "title": "Cold Air Phenomenon",
+          "description": "Unexplained temperature drop across environments. Patient reports seeing the dead.",
+          "choices": [
+            { "label": "Investigate Cole's claims objectively", "targetId": "investigate" },
+            { "label": "Dismiss the sightings as trauma", "targetId": "dismiss" }
+          ]
+        },
+        "investigate": {
+          "title": "The Revelation",
+          "description": "Malcolm realizes he is one of the ghosts Cole sees.",
+          "isEnding": true
+        },
+        "dismiss": {
+          "title": "Unresolved Spirits",
+          "description": "Malcolm remains trapped in denial, haunting his wife forever.",
+          "isEnding": true
+        }
+      }
+    },
+    "taxi-driver": {
+      "rootNode": "start",
+      "nodes": {
+        "start": {
+          "title": "Travis Bickle's Vigil",
+          "description": "An insomniac ex-Marine drives through the neon-drenched streets of New York City, growing increasingly disgusted by social decay.",
+          "choices": [
+            { "label": "Engage in social isolation paths", "targetId": "isolation" },
+            { "label": "Purchase illegal defense arsenals", "targetId": "arsenal" }
+          ]
+        },
+        "isolation": {
+          "title": "The Desert of Isolation",
+          "description": "Travis retreats entirely inside his apartment, writing intense manifests while his psychological stability fractures.",
+          "isEnding": true
+        },
+        "arsenal": {
+          "title": "The Decisive Intervention",
+          "description": "Armed and physically transformed, Travis stalks the city streets looking for a target to enact his twisted vision of salvation.",
+          "isEnding": true
+        }
+      }
+    },
+    "oldboy": {
+      "rootNode": "start",
+      "nodes": {
+        "start": {
+          "title": "The 15-Year Confinement",
+          "description": "Oh Dae-su is inexplicably abducted and imprisoned inside a sealed hotel room for fifteen years with no explanation.",
+          "choices": [
+            { "label": "Execute immediate violent retribution", "targetId": "vengeance" },
+            { "label": "Investigate the captor's underlying identity", "targetId": "puzzle" }
+          ]
+        },
+        "vengeance": {
+          "title": "The Corridor Conflict",
+          "description": "Armed with a hammer, Dae-su fights through rows of guards to extract blood confessions from his jailers.",
+          "isEnding": true
+        },
+        "puzzle": {
+          "title": "The Mastermind's Deception",
+          "description": "Dae-su traces the complex clues left behind by Lee Woo-jin, walking directly into a trap built out of his own history.",
+          "isEnding": true
+        }
+      }
+    },
+    "zodiac": {
+      "rootNode": "start",
+      "nodes": {
+        "start": {
+          "title": "Cryptic Cyphers",
+          "description": "Unverified correspondence received by major newspapers claiming responsibility for unsolved murders.",
+          "choices": [
+            { "label": "Publish the cipher on the front page", "targetId": "publish" },
+            { "label": "Withhold information from the public", "targetId": "withhold" }
+          ]
+        },
+        "publish": {
+          "title": "Public Panic",
+          "description": "The cipher is published, causing widespread fear but generating thousands of tips—one of which might be the key.",
+          "isEnding": true
+        },
+        "withhold": {
+          "title": "The Killer Escalates",
+          "description": "Enraged by the lack of attention, the killer strikes again to force the police's hand.",
+          "isEnding": true
+        }
       }
     }
   }

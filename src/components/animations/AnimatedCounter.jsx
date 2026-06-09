@@ -11,9 +11,10 @@ const AnimatedCounter = ({ target, duration = 1400, delay = 0 }) => {
   const ref = useRef(null)
   const triggered = useRef(false)
 
-  const isNumeric = !isNaN(Number(target.replace(/[^0-9.]/g, '')))
-  const numericTarget = isNumeric ? parseFloat(target.replace(/[^0-9.]/g, '')) : 0
-  const suffix = isNumeric ? target.replace(/[0-9.]/g, '') : target
+  const targetStr = String(target)
+  const isNumeric = !isNaN(Number(targetStr.replace(/[^0-9.]/g, '')))
+  const numericTarget = isNumeric ? parseFloat(targetStr.replace(/[^0-9.]/g, '')) : 0
+  const suffix = isNumeric ? targetStr.replace(/[0-9.]/g, '') : targetStr
 
   useEffect(() => {
     const el = ref.current

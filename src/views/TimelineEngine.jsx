@@ -5,20 +5,37 @@ import Sidebar from '../components/layout/Sidebar'
 import TimelineEffects from '../components/TimelineEffects'
 import TimelineMapOverlay from '../components/TimelineMapOverlay'
 
+import { MOVIES } from '../data/movies'
+
 export default function TimelineEngine() {
-  const [activeMovieId, setActiveMovieId] = useState('donnie-darko')
-  const [currentNodeId, setCurrentNodeId] = useState(timelineMatrix[activeMovieId].rootNode)
-  const [visitedPath, setVisitedPath] = useState([timelineMatrix[activeMovieId].rootNode])
-  const [showMap, setShowMap] = useState(false)
+  const [activeMovieId, setActiveMovieId] = useState('donnie-darko');
+  const movies = MOVIES;
+
+  // Safely fallback onto a valid string key if timelineMatrix lookup fails
+  const targetMatrix = timelineMatrix[activeMovieId] || {
+    rootNode: "start",
+    nodes: {
+      start: {
+        title: "Syncing Narrative Vault",
+        description: "The historical event log structure for this cinematic selection is currently generating inside the system database registry.",
+        choices: []
+      }
+    }
+  };
+
+  const [currentNodeId, setCurrentNodeId] = useState("start");
+  const [visitedPath, setVisitedPath] = useState(["start"]);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
-    const root = timelineMatrix[activeMovieId].rootNode
-    setCurrentNodeId(root)
-    setVisitedPath([root])
-  }, [activeMovieId])
+    const initialRoot = timelineMatrix[activeMovieId]?.rootNode || "start";
+    setCurrentNodeId(initialRoot);
+    setVisitedPath([initialRoot]);
+  }, [activeMovieId]);
 
-  const movieData = timelineMatrix[activeMovieId]
-  const currentNode = movieData.nodes[currentNodeId] || movieData.nodes[movieData.rootNode]
+  const currentNode = targetMatrix.nodes[currentNodeId] || targetMatrix.nodes["start"] || { title: "Archiving...", description: "Loading registry streams...", choices: [] };
+  const choicesList = currentNode.choices || [];
+  const isTerminalNode = currentNode.isEnding || choicesList.length === 0;
 
   const handleBranch = (choice) => {
     setCurrentNodeId(choice.targetId)
@@ -29,12 +46,12 @@ export default function TimelineEngine() {
   }
 
   const handleReset = () => {
-    const root = timelineMatrix[activeMovieId].rootNode
-    setCurrentNodeId(root)
-    setVisitedPath([root])
+    const initialRoot = timelineMatrix[activeMovieId]?.rootNode || "start";
+    setCurrentNodeId(initialRoot);
+    setVisitedPath([initialRoot]);
   }
 
-  const isTerminalNode = currentNode.isEnding || !currentNode.choices || currentNode.choices.length === 0;
+
 
   return (
     <div className="absolute inset-0 bg-black overflow-hidden flex text-white">
@@ -44,9 +61,9 @@ export default function TimelineEngine() {
 
       <div className="flex-1 relative h-full flex items-center justify-start px-16 lg:px-24">
         <div className="absolute top-8 right-16 z-50 flex gap-3">
-          <button onClick={() => setActiveMovieId('donnie-darko')} className={`px-4 py-2 rounded-xl border text-xs font-medium transition-all ${activeMovieId === 'donnie-darko' ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'}`}>Donnie Darko</button>
-          <button onClick={() => setActiveMovieId('the-sixth-sense')} className={`px-4 py-2 rounded-xl border text-xs font-medium transition-all ${activeMovieId === 'the-sixth-sense' ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'}`}>The Sixth Sense</button>
-          <button onClick={() => setActiveMovieId('zodiac')} className={`px-4 py-2 rounded-xl border text-xs font-medium transition-all ${activeMovieId === 'zodiac' ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'}`}>Zodiac</button>
+          {movies.map(m => (
+            <button key={m.id} onClick={() => setActiveMovieId(m.id)} className={`px-4 py-2 rounded-xl border text-xs font-medium transition-all ${activeMovieId === m.id ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'}`}>{m.title}</button>
+          ))}
         </div>
 
         {currentNode.type === 'tangent' ? (
@@ -86,7 +103,7 @@ export default function TimelineEngine() {
                     ⟲ Reset Timeline
                   </button>
                 ) : (
-                  currentNode.choices.map((choice, idx) => {
+                  choicesList.map((choice, idx) => {
                     const isResetAction = choice.label.toLowerCase().includes('collapse') || choice.label.toLowerCase().includes('wake') || choice.label.toLowerCase().includes('restart');
                     return (
                       <button
@@ -116,7 +133,7 @@ export default function TimelineEngine() {
 
       {showMap && (
         <TimelineMapOverlay 
-          timelineData={timelineMatrix[activeMovieId]}
+          timelineData={targetMatrix}
           currentNodeId={currentNodeId}
           visitedPath={visitedPath}
           closeMap={() => setShowMap(false)}

@@ -155,7 +155,7 @@ export const timelineMatrix = {
       }
     }
   },
-  'the-sixth-sense': {
+  'sixth-sense': {
     rootNode: 'session-1',
     nodes: {
       'session-1': {
@@ -292,6 +292,151 @@ export const timelineMatrix = {
       'the-hardware-store': {
         title: "The Final Gaze",
         description: "Graysmith walks into the Vallejo hardware store. He locks eyes with Arthur Leigh Allen. No words are spoken. Total closure achieved.",
+        type: 'canonical',
+        isEnding: true,
+        choices: []
+      }
+    }
+  },
+  'taxi-driver': {
+    rootNode: 'td-root',
+    nodes: {
+      'td-root': {
+        title: "The Insomnia",
+        description: "Travis Bickle takes a job as a night-shift taxi driver because he cannot sleep.",
+        type: 'canonical',
+        choices: [
+          { label: "Drive the night shift", targetId: "td-meet-betsy" },
+          { label: "Seek psychiatric help", targetId: "tangent-hospital" }
+        ]
+      },
+      'tangent-hospital': {
+        title: "The Ward",
+        description: "Travis gets help but loses his purpose. Reality fades.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: [{ label: "Wake up", targetId: "td-root" }]
+      },
+      'td-meet-betsy': {
+        title: "The Campaign Worker",
+        description: "Travis becomes obsessed with Betsy, a campaign worker.",
+        type: 'canonical',
+        choices: [
+          { label: "Take her to a porno movie", targetId: "td-rejection" },
+          { label: "Take her to a nice dinner", targetId: "tangent-romance" }
+        ]
+      },
+      'tangent-romance': {
+        title: "A Normal Life",
+        description: "Travis tries to be normal, but the filth of the city slowly consumes him anyway. He breaks.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: [{ label: "Wake up", targetId: "td-root" }]
+      },
+      'td-rejection': {
+        title: "The Rejection",
+        description: "Betsy is disgusted and leaves him. Travis spirals deeper into isolation.",
+        type: 'canonical',
+        choices: [
+          { label: "Buy guns and train", targetId: "td-the-plot" }
+        ]
+      },
+      'td-the-plot': {
+        title: "The Assassination Plot",
+        description: "Travis plans to assassinate the presidential candidate.",
+        type: 'canonical',
+        choices: [
+          { label: "Attempt the assassination", targetId: "td-the-rally" },
+          { label: "Target the brothel instead", targetId: "td-the-shootout" }
+        ]
+      },
+      'td-the-rally': {
+        title: "The Secret Service",
+        description: "Travis is spotted by the Secret Service and flees.",
+        type: 'canonical',
+        choices: [
+          { label: "Redirect focus to saving Iris", targetId: "td-the-shootout" }
+        ]
+      },
+      'td-the-shootout': {
+        title: "The Bloodbath",
+        description: "Travis assaults the brothel to save Iris, killing the pimps and gangsters in a brutal shootout.",
+        type: 'canonical',
+        choices: [
+          { label: "Survive and become a hero", targetId: "td-ending" }
+        ]
+      },
+      'td-ending': {
+        title: "The Hero's Return",
+        description: "Travis survives and is hailed as a hero by the press. Betsy rides in his cab, but he rejects her.",
+        type: 'canonical',
+        isEnding: true,
+        choices: []
+      }
+    }
+  },
+  'oldboy': {
+    rootNode: 'ob-root',
+    nodes: {
+      'ob-root': {
+        title: "The Imprisonment",
+        description: "Oh Dae-su is mysteriously imprisoned in a private cell for 15 years.",
+        type: 'canonical',
+        choices: [
+          { label: "Train and plan revenge", targetId: "ob-release" },
+          { label: "Give up and die", targetId: "tangent-starve" }
+        ]
+      },
+      'tangent-starve': {
+        title: "Broken Will",
+        description: "Dae-su loses his mind and starves to death.",
+        type: 'tangent',
+        effect: 'blackhole',
+        choices: [{ label: "Wake up", targetId: "ob-root" }]
+      },
+      'ob-release': {
+        title: "The Release",
+        description: "Dae-su is suddenly released onto a rooftop.",
+        type: 'canonical',
+        choices: [
+          { label: "Go to the sushi restaurant", targetId: "ob-meet-mido" }
+        ]
+      },
+      'ob-meet-mido': {
+        title: "Meeting Mi-do",
+        description: "Dae-su meets Mi-do, a young sushi chef, who takes him in and helps him.",
+        type: 'canonical',
+        choices: [
+          { label: "Fall in love", targetId: "ob-the-search" }
+        ]
+      },
+      'ob-the-search': {
+        title: "Hunting the Captor",
+        description: "Dae-su tracks down the private prison and tortures the warden.",
+        type: 'canonical',
+        choices: [
+          { label: "Extract the truth", targetId: "ob-the-confrontation" }
+        ]
+      },
+      'ob-the-confrontation': {
+        title: "Woo-jin's Penthouse",
+        description: "Dae-su confronts Lee Woo-jin, the man who imprisoned him.",
+        type: 'canonical',
+        choices: [
+          { label: "Open the photo album", targetId: "ob-the-truth" }
+        ]
+      },
+      'ob-the-truth': {
+        title: "The Horrifying Truth",
+        description: "Woo-jin reveals that Mi-do is actually Dae-su's daughter.",
+        type: 'canonical',
+        choices: [
+          { label: "Beg for forgiveness", targetId: "ob-ending" }
+        ]
+      },
+      'ob-ending': {
+        title: "The Hypnotist",
+        description: "Dae-su cuts out his own tongue. Later, he seeks out a hypnotist to erase the memory of the truth so he can remain with Mi-do.",
         type: 'canonical',
         isEnding: true,
         choices: []

@@ -33,7 +33,6 @@ const NAV = [
         <path d="M6 5.5L10 7.5L6 9.5V5.5Z" fill="currentColor"/>
       </svg>
     ),
-    count: 3,
   },
   {
     label: 'Timelines',
@@ -45,7 +44,7 @@ const NAV = [
     ),
   },
 ]
-const NavItem = ({ item, index, active, isCollapsed, onClick }) => (
+const NavItem = ({ item, index, active, isCollapsed, onClick, moviesCount }) => (
   <button
     id={`nav-${item.label.toLowerCase()}`}
     onClick={() => { playClickSound(); onClick(index); }}
@@ -76,16 +75,16 @@ const NavItem = ({ item, index, active, isCollapsed, onClick }) => (
       </span>
     )}
 
-    {!isCollapsed && item.count !== undefined && (
+    {!isCollapsed && (item.count !== undefined || item.label === 'Library') && (
       <span className="text-xs font-mono tabular-nums pr-1"
         style={{ color: active ? 'rgba(0,242,254,0.8)' : '#94a3b8' }}>
-        {item.count}
+        {item.label === 'Library' ? moviesCount : item.count}
       </span>
     )}
   </button>
 )
 
-export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsCollapsed }) {
+export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsCollapsed, moviesCount }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [internalCollapsed, setInternalCollapsed] = useState(false)
@@ -155,6 +154,7 @@ export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsC
                 index={i}
                 active={isActive}
                 isCollapsed={collapsed}
+                moviesCount={moviesCount}
                 onClick={() => {
                   if (item.path) {
                     navigate(item.path)

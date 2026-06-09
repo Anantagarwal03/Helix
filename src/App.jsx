@@ -1,20 +1,20 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
-import './index.css'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import './index.css';
 
-import Galaxy from './components/animations/Galaxy'
-import Home from './views/Home'
-import FilmDetail from './views/FilmDetail'
-import TimelineEngine from './views/TimelineEngine'
+import HeroSection from './sections/HeroSection';
+import MainDashboard from './views/MainDashboard'; 
+import FilmDetail from './views/FilmDetail';
+import Sidebar from './components/layout/Sidebar';
+import TimelineEngine from './views/TimelineEngine';
+import Galaxy from './components/animations/Galaxy';
 
-function AppLayout() {
-  const location = useLocation()
-  const isFilmRoute = location.pathname.startsWith('/film/')
+// Create a wrapper for the dashboard that includes the sidebar
+const DashboardLayout = ({ children }) => {
+  const location = useLocation();
+  const isFilmRoute = location.pathname.startsWith('/film/');
 
   return (
-    <div 
-      className={`absolute inset-0 ${isFilmRoute ? 'overflow-y-auto scroll-smooth' : 'overflow-hidden'}`} 
-      style={{ background: '#030014' }}
-    >
+    <div className="flex w-full h-screen bg-[#030014] text-white overflow-hidden">
       {/* ── Global Film Grain Overlay ────────── */}
       <div 
         className="fixed inset-0 z-[9999] opacity-[0.08] pointer-events-none mix-blend-screen"
@@ -41,22 +41,42 @@ function AppLayout() {
           style={{ background: 'rgba(3,0,20,0.72)' }} />
       </div>
 
-      {/* ── Page Routes ───────────────────────────────────── */}
-      <div className={`relative z-10 w-full ${isFilmRoute ? 'min-h-full' : 'h-full'}`}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/film/:filmId" element={<FilmDetail />} />
-          <Route path="/timeline" element={<TimelineEngine />} />
-        </Routes>
-      </div>
+      <Sidebar />
+      <main className={`flex-1 h-screen relative z-10 ${isFilmRoute ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+        {children}
+      </main>
     </div>
-  )
-}
+  );
+};
 
-export default function App() {
+function App() {
   return (
     <BrowserRouter>
-      <AppLayout />
+      <Routes>
+        {/* Standalone Front Door - NO SIDEBAR */}
+        <Route path="/" element={<HeroSection />} />
+        
+        {/* Protected Dashboard Routes - WITH SIDEBAR */}
+        <Route path="/graph" element={
+          <DashboardLayout>
+            <MainDashboard />
+          </DashboardLayout>
+        } />
+        
+        <Route path="/film/:id" element={
+          <DashboardLayout>
+            <FilmDetail />
+          </DashboardLayout>
+        } />
+
+        <Route path="/timeline" element={
+          <DashboardLayout>
+            <TimelineEngine />
+          </DashboardLayout>
+        } />
+      </Routes>
     </BrowserRouter>
-  )
+  );
 }
+
+export default App;

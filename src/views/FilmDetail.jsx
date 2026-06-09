@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { FILM_DETAILS } from '../data/filmDetails'
+import { MOVIES } from '../data/movies'
 
 export default function FilmDetail() {
-  const { filmId } = useParams()
-  const film = FILM_DETAILS.find(f => f.id === filmId)
+  const { id } = useParams()
+  const [film, setFilm] = useState(null)
 
   useEffect(() => {
     if (window.gsap) {
@@ -19,6 +19,30 @@ export default function FilmDetail() {
     document.documentElement.style.overflow = "auto"
     document.documentElement.style.height = "auto"
   }, [])
+
+  useEffect(() => {
+    const targetFilm = MOVIES.find(m => m.id === id);
+    if (targetFilm) {
+      setFilm({
+        id: targetFilm.id,
+        title: targetFilm.title,
+        director: targetFilm.director,
+        releaseYear: targetFilm.year,
+        poster: targetFilm.posterUrl || targetFilm.poster,
+        tagline: targetFilm.tagline || "Deception fractures structural reality parameters apart.",
+        runtime: targetFilm.runtime || "125 min",
+        summary: targetFilm.synopsis || targetFilm.summary || "This cinematic index record has been successfully mapped via the local frontend infrastructure.",
+        genres: targetFilm.genres || ["Thriller", "Mystery"],
+        themes: targetFilm.themes || ["Perception Shift", "Obsession"],
+        cast: targetFilm.cast || [{ actor: targetFilm.director, role: "Director Archival Core" }],
+        boxOffice: targetFilm.boxOffice || "Classified Transaction Records",
+        reception: targetFilm.reception || `${targetFilm.complexity || 'High'} Tier Evaluation Matrix`,
+        soundtrack: targetFilm.soundtrack || "Thematic Orchestration Ambient Waves",
+        tracklist: targetFilm.tracklist || ["Main Title Narrative Theme"],
+        whereToWatch: targetFilm.whereToWatch || "Secure Archive Stream Hub"
+      });
+    }
+  }, [id]);
 
   if (!film) {
     return (
@@ -64,17 +88,28 @@ export default function FilmDetail() {
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-12 lg:gap-16 pt-4 md:pt-0">
         
         <div className="w-full md:w-72 lg:w-80 flex-shrink-0 mx-auto md:mx-0">
-          <div
-            className="w-full rounded-2xl overflow-hidden"
-            style={{
-              boxShadow: '0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)'
-            }}
+          <div className="relative w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border"
+            style={{ borderColor: 'rgba(255,255,255,0.08)' }}
           >
-            <img
-              src={film.poster}
-              alt={film.title}
-              className="w-full h-auto object-cover block"
+            {/* Fallback structural layer */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 text-slate-800">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <rect x="2" y="2" width="20" height="20" rx="2.5" />
+                <path d="M7 2v20M17 2v20M2 7h5M2 17h5M17 7h5M17 17h5M7 12h10" />
+              </svg>
+            </div>
+
+            {/* Real Dynamic Poster Asset */}
+            <img 
+              src={film?.poster || film?.posterUrl || movie?.poster || movie?.posterUrl} 
+              alt={film?.title || "Film Poster"} 
+              className="absolute inset-0 w-full h-full object-cover z-10"
+              onError={(e) => {
+                // Direct variable reference fallback fallback loop if state array changes shape
+                const currentId = window.location.pathname.split('/').pop();
+                const backupData = MOVIES.find(m => m.id === currentId);
+                if (backupData) e.target.src = backupData.poster;
+              }}
             />
           </div>
         </div>
@@ -82,7 +117,7 @@ export default function FilmDetail() {
         <div className="relative flex-1 text-slate-200 flex flex-col justify-center">
           
           <img
-            src={film.poster}
+            src={film.posterUrl || film.poster}
             alt="ambient background"
             className="absolute inset-0 -z-10 blur-[100px] opacity-20 scale-110 pointer-events-none object-cover"
           />
