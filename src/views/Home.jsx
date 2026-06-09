@@ -17,12 +17,14 @@ export default function Home() {
   const location = useLocation()
   const initialNode = searchParams.get('node')
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [activeSection, setActiveSection] = useState(() => {
     if (location.state?.scrollToSection !== undefined) {
       return Number(location.state.scrollToSection)
     }
     return initialNode ? 1 : 0
   })
+
   const scrollerRef  = useRef(null)
   const sectionsRef  = useRef([])
   const stRef        = useRef(null)
@@ -65,7 +67,7 @@ export default function Home() {
   }, [location.state, scrollToSection])
 
   useEffect(() => {
-    const scroller  = scrollerRef.current
+    const scroller = scrollerRef.current
     if (!scroller) return
 
     if (stRef.current) stRef.current.kill()
@@ -76,12 +78,6 @@ export default function Home() {
         scroller: scroller,
         start:    'top top',
         end:      () => `+=${(SECTIONS.length - 1) * window.innerHeight}`,
-        snap: {
-          snapTo:   1 / (SECTIONS.length - 1),
-          duration: { min: 0.25, max: 0.65 },
-          delay:    0.08,
-          ease:     'power3.inOut',
-        },
         onUpdate: self => {
           const idx = Math.round(self.progress * (SECTIONS.length - 1))
           if (!isScrolling.current) {
@@ -126,12 +122,16 @@ export default function Home() {
   }, [])
 
   return (
-    <>
-      <div className="fixed left-0 top-0 bottom-0 z-30">
+    <div className="w-screen h-screen overflow-hidden flex bg-[#030014] text-white relative">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(124,58,237,0.04)_0%,transparent_70%)] pointer-events-none z-0" />
+      
+      <div className="h-full flex-shrink-0 z-30 transition-all duration-300 ease-in-out" style={{ width: isSidebarCollapsed ? '64px' : '200px' }}>
         <Sidebar
           activeSection   = {activeSection}
           sections        = {SECTIONS}
           onNavigate      = {scrollToSection}
+          isCollapsed     = {isSidebarCollapsed}
+          setIsCollapsed  = {setIsSidebarCollapsed}
         />
       </div>
 
@@ -146,8 +146,8 @@ export default function Home() {
 
       <div
         ref       = {scrollerRef}
-        className = "absolute top-0 bottom-0 right-0 overflow-y-scroll"
-        style     = {{ left: '200px', scrollBehavior: 'auto' }}
+        className = "h-full flex-1 overflow-y-scroll relative z-10"
+        style     = {{ scrollBehavior: 'auto' }}
         id        = "snap-scroller"
       >
         <div
@@ -177,6 +177,6 @@ export default function Home() {
           <LibrarySection />
         </div>
       </div>
-    </>
+    </div>
   )
 }
