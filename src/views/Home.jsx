@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
@@ -14,9 +14,15 @@ const SECTIONS = ['overview', 'graph', 'library']
 
 export default function Home() {
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const initialNode = searchParams.get('node')
 
-  const [activeSection, setActiveSection] = useState(initialNode ? 1 : 0)
+  const [activeSection, setActiveSection] = useState(() => {
+    if (location.state?.scrollToSection !== undefined) {
+      return Number(location.state.scrollToSection)
+    }
+    return initialNode ? 1 : 0
+  })
   const scrollerRef  = useRef(null)
   const sectionsRef  = useRef([])
   const stRef        = useRef(null)
@@ -39,6 +45,16 @@ export default function Home() {
       setTimeout(() => scrollToSection(1), 100)
     }
   }, [initialNode, scrollToSection])
+
+  useEffect(() => {
+    if (location.state?.scrollToSection !== undefined) {
+      const targetSection = Number(location.state.scrollToSection)
+      setActiveSection(targetSection)
+      if (typeof scrollToSection === 'function') {
+        scrollToSection(targetSection)
+      }
+    }
+  }, [location.state, scrollToSection])
 
   useEffect(() => {
     const scroller  = scrollerRef.current

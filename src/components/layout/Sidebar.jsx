@@ -1,9 +1,3 @@
-/**
- * Sidebar v3 — GSAP sync edition
- * activeSection: 0=overview, 1=graph, 2=library
- * onNavigate(index): programmatic GSAP scroll
- */
-
 import { useNavigate, useLocation } from 'react-router-dom'
 
 const NAV = [
@@ -54,9 +48,8 @@ const NavItem = ({ item, index, active, onClick }) => (
   <button
     id={`nav-${item.label.toLowerCase()}`}
     onClick={() => onClick(index)}
-    className={`group relative flex w-full items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150 ${active ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+    className={`group relative flex w-full items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-150 ${active ? 'text-white bg-white/5' : 'text-gray-400 hover:text-white hover:bg-white/[0.02]'}`}
   >
-    {/* Neon left indicator */}
     {active && (
       <span
         className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full"
@@ -93,71 +86,71 @@ const Sidebar = ({ activeSection, onNavigate }) => {
   const location = useLocation()
 
   return (
-  <aside
-    className="flex flex-col h-full relative"
-    style={{
-      width: '200px',
-      background: 'rgba(3,0,20,0.85)',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-      borderRight: '1px solid rgba(255,255,255,0.05)',
-    }}
-  >
-    {/* Top ambient */}
-    <div className="absolute top-0 left-0 right-0 h-24 pointer-events-none"
-      style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(0,242,254,0.04) 0%, transparent 100%)' }} />
+    <aside
+      className="flex flex-col h-full relative select-none"
+      style={{
+        width: '200px',
+        background: 'rgba(3,0,20,0.85)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRight: '1px solid rgba(255,255,255,0.05)',
+      }}
+    >
+      <div className="absolute top-0 left-0 right-0 h-24 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(0,242,254,0.04) 0%, transparent 100%)' }} />
 
-    {/* ── Logo ─────────────────────────────────────────── */}
-    <div className="flex-shrink-0 px-4 pt-5 pb-4"
-      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-      <div className="flex items-center gap-2.5">
-        <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
-          <div className="absolute inset-0 rounded-full border border-white/10"
-            style={{ animation: 'spin 24s linear infinite' }} />
-          <div className="absolute inset-0.5 rounded-full border border-white/[0.05]"
-            style={{ animation: 'spin 16s linear infinite reverse' }} />
-          <div className="w-1.5 h-1.5 rounded-full"
-            style={{ background: 'linear-gradient(135deg,#00f2fe,#7c3aed)', boxShadow:'0 0 8px rgba(0,242,254,0.8)' }} />
-        </div>
-        <div>
-          <div className="text-[12px] font-semibold tracking-[-0.02em] text-white">HELIX</div>
-          <div className="text-[9px] font-mono text-gray-500 mt-0.5 tracking-[0.07em]">TWIST ENGINE</div>
+      <div className="flex-shrink-0 px-4 pt-5 pb-4"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+        <div className="flex items-center gap-2.5">
+          <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
+            <div className="absolute inset-0 rounded-full border border-white/10"
+              style={{ animation: 'spin 24s linear infinite' }} />
+            <div className="absolute inset-0.5 rounded-full border border-white/[0.05]"
+              style={{ animation: 'spin 16s linear infinite reverse' }} />
+            <div className="w-1.5 h-1.5 rounded-full"
+              style={{ background: 'linear-gradient(135deg,#00f2fe,#7c3aed)', boxShadow:'0 0 8px rgba(0,242,254,0.8)' }} />
+          </div>
+          <div>
+            <div className="text-[12px] font-semibold tracking-[-0.02em] text-white">HELIX</div>
+            <div className="text-[9px] font-mono text-gray-500 mt-0.5 tracking-[0.07em]">TWIST ENGINE</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    {/* ── Nav ──────────────────────────────────────────── */}
-    <div className="flex-1 overflow-y-auto px-2 py-3">
-      <p className="px-3 mb-2 text-[9px] font-medium text-gray-500 uppercase tracking-[0.12em]">
-        Sections
-      </p>
-      <nav className="flex flex-col gap-0.5">
-        {NAV.map((item, i) => {
-          const isActive = item.path ? location.pathname === item.path : (location.pathname === '/' && activeSection === i)
-          return (
-            <NavItem
-              key={item.label}
-              item={item}
-              index={i}
-              active={isActive}
-              onClick={() => {
-                if (item.path) {
-                  navigate(item.path)
-                } else {
-                  if (location.pathname !== '/') {
-                    navigate('/')
-                  } else if (onNavigate) {
-                    onNavigate(i)
+      <div className="flex-1 overflow-y-auto px-2 py-3">
+        <p className="px-3 mb-2 text-[9px] font-medium text-gray-500 uppercase tracking-[0.12em]">
+          Sections
+        </p>
+        <nav className="flex flex-col gap-0.5">
+          {NAV.map((item, i) => {
+            const normalizedActiveSection = Number(activeSection)
+            const isActive = item.path 
+              ? location.pathname === item.path 
+              : (location.pathname === '/' && normalizedActiveSection === i)
+
+            return (
+              <NavItem
+                key={item.label}
+                item={item}
+                index={i}
+                active={isActive}
+                onClick={() => {
+                  if (item.path) {
+                    navigate(item.path)
+                  } else {
+                    if (location.pathname !== '/') {
+                      navigate('/', { state: { scrollToSection: i } })
+                    } else if (onNavigate) {
+                      onNavigate(i)
+                    }
                   }
-                }
-              }}
-            />
-          )
-        })}
-      </nav>
-    </div>
-
-  </aside>
+                }}
+              />
+            )
+          })}
+        </nav>
+      </div>
+    </aside>
   )
 }
 
