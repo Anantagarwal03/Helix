@@ -1,0 +1,13 @@
+{
+  "movies": [
+    { "id": "donnie-darko", "title": "Donnie Darko", "director": "Richard Kelly" }
+  ],
+  "timelines": {
+    "donnie-darko": {
+      "rootNode": "start",
+      "nodes": {
+        "start": { "title": "Tangent Universe Alignment", "description": "Artifact drop detected." }
+      }
+    }
+  }
+}
