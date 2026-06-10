@@ -141,14 +141,7 @@ export default function Home() {
         />
       </div>
 
-      <div className="fixed top-8 right-8 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-full pointer-events-none"
-        style={{ background:'rgba(3,0,20,0.4)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(0,242,254,0.15)', boxShadow:'0 4px 24px rgba(0,0,0,0.4)' }}>
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="animate-ping absolute inset-0 rounded-full opacity-60" style={{ background:'#00f2fe' }} />
-          <span className="relative flex h-1.5 w-1.5 rounded-full" style={{ background:'#00f2fe' }} />
-        </span>
-        <span className="text-[10.5px] font-mono text-cyan-400 tracking-wide pl-1">Labyrinth Engine Active • {movies.length} Records Indexed</span>
-      </div>
+
 
       <div
         ref       = {scrollerRef}

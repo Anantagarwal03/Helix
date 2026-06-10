@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { playClickSound } from '../../utils/audio'
 
 const NAV = [
@@ -110,7 +110,7 @@ export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsC
         style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
         
         {!collapsed ? (
-          <div className="flex items-center gap-2.5 overflow-hidden flex-1 min-w-0 pl-1">
+          <Link to="/" className="flex items-center gap-2.5 overflow-hidden flex-1 min-w-0 pl-1">
             <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
               <div className="absolute inset-0 rounded-full border border-white/10" style={{ animation: 'spin 24s linear infinite' }} />
               <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f2fe]" />
@@ -119,7 +119,7 @@ export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsC
               <div className="text-[12px] font-semibold tracking-[-0.02em] text-white uppercase leading-tight">HELIX</div>
               <div className="text-[9px] font-mono text-gray-500 tracking-[0.07em] mt-0.5 leading-none">TWIST ENGINE</div>
             </div>
-          </div>
+          </Link>
         ) : null}
 
         <button
@@ -159,10 +159,10 @@ export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsC
                   if (item.path) {
                     navigate(item.path)
                   } else {
-                    if (location.pathname !== '/') {
-                      navigate('/', { state: { scrollToSection: i } })
-                    } else if (onNavigate) {
-                      onNavigate(i)
+                    if (location.pathname !== '/graph') {
+                      navigate('/graph', { state: { scrollToSection: i } })
+                    } else {
+                      navigate('/graph', { state: { scrollToSection: i } })
                     }
                   }
                 }}

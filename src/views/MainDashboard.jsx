@@ -3,7 +3,7 @@ import { useSearchParams, useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
-import HeroSection    from '../sections/HeroSection'
+import OverviewTab    from './OverviewTab'
 import GraphSection   from '../sections/GraphSection'
 import LibrarySection from '../sections/LibrarySection'
 import { playTransitionSound } from '../utils/audio'
@@ -126,45 +126,13 @@ export default function MainDashboard() {
   }, [])
 
   return (
-    <div className="w-screen h-screen overflow-hidden flex bg-[#030014] text-white relative">
+    <div className="w-full h-screen overflow-hidden flex bg-[#030014] text-white relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(124,58,237,0.04)_0%,transparent_70%)] pointer-events-none z-0" />
       
-
-
-      <div className="fixed top-8 right-8 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-full pointer-events-none"
-        style={{ background:'rgba(3,0,20,0.4)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)', border:'1px solid rgba(0,242,254,0.15)', boxShadow:'0 4px 24px rgba(0,0,0,0.4)' }}>
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="animate-ping absolute inset-0 rounded-full opacity-60" style={{ background:'#00f2fe' }} />
-          <span className="relative flex h-1.5 w-1.5 rounded-full" style={{ background:'#00f2fe' }} />
-        </span>
-        <span className="text-[10.5px] font-mono text-cyan-400 tracking-wide pl-1">Labyrinth Engine Active • {movies.length} Records Indexed</span>
-      </div>
-
-      <div
-        ref       = {scrollerRef}
-        className = "h-full flex-1 overflow-y-scroll relative z-10"
-        style     = {{ scrollBehavior: 'auto' }}
-        id        = "snap-scroller"
-      >
-
-
-        <div
-          ref       = {el => setSectionRef(el, 1)}
-          className = "snap-section relative w-full overflow-hidden"
-          style     = {{ height: '100vh' }}
-          id        = "section-graph"
-        >
-          <GraphSection initialNode={initialNode} />
-        </div>
-
-        <div
-          ref       = {el => setSectionRef(el, 2)}
-          className = "snap-section relative w-full overflow-hidden"
-          style     = {{ height: '100vh' }}
-          id        = "section-library"
-        >
-          <LibrarySection movies={movies} />
-        </div>
+      <div className="flex-1 w-full h-full relative z-10 overflow-y-auto">
+        {activeSection === 0 && <OverviewTab />}
+        {activeSection === 1 && <GraphSection initialNode={initialNode} />}
+        {activeSection === 2 && <LibrarySection movies={movies} />}
       </div>
     </div>
   )
