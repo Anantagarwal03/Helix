@@ -1,112 +1,139 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-
-const BentoCard = ({ children, className, delay = 0 }) => (
-  <motion.div 
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, delay }}
-    className={`bg-white/5 border border-white/10 backdrop-blur-lg rounded-2xl p-6 relative overflow-hidden group ${className}`}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
-    <div className="relative z-10 h-full flex flex-col">{children}</div>
-  </motion.div>
-);
+import movies from '../data/moviesData.json';
 
 const OverviewTab = () => {
-  const recentMovies = [
-    { title: "Oldboy", twist: "High Deviation", color: "text-[#ec4899]" },
-    { title: "Taxi Driver", twist: "Moderate", color: "text-[#8b5cf6]" },
-    { title: "Donnie Darko", twist: "Timeline Fracture", color: "text-[#00f2fe]" },
-    { title: "The Sixth Sense", twist: "Critical Shift", color: "text-red-400" }
-  ];
+  const [sourceMovie, setSourceMovie] = useState('1');
+  const [targetMovie, setTargetMovie] = useState('4');
+
+  const activePathways = {
+    '1-2': { path: ['Timeline Splice', 'Traumatic Revelation'], match: '91%' },
+    '1-3': { path: ['Localized Loop', 'Retroactive Shift'], match: '88%' },
+    '1-4': { path: ['Tangent Universe', 'Delusion Projection'], match: '94%' },
+    '1-5': { path: ['Temporal Anomaly', 'Obsession Loop'], match: '76%' },
+    '2-3': { path: ['Identity Fracture', 'Perception Pivot'], match: '85%' },
+    '2-4': { path: ['Psychological Trauma', 'Ambiguous Ending'], match: '89%' },
+    '2-5': { path: ['Vengeance Vector', 'Unresolved Labyrinth'], match: '82%' },
+    '3-4': { path: ['Subconscious Projection', 'Narrator Fracture'], match: '92%' },
+    '3-5': { path: ['Hidden Reality', 'Procedural Obsession'], match: '70%' },
+    '4-5': { path: ['Insomnia Degeneration', 'Archival Maze'], match: '84%' }
+  };
+
+  const currentPath = activePathways[`${sourceMovie}-${targetMovie}`] || activePathways[`${targetMovie}-${sourceMovie}`] || { path: ['Symmetric Vector', 'Structural Link'], match: '80%' };
 
   return (
-    <div className="min-h-screen bg-[#030014] text-white p-6 md:p-8 relative overflow-hidden w-full">
+    <div className="min-h-screen w-full bg-[#030014] text-white p-6 md:p-12 lg:p-16 flex flex-col overflow-y-auto relative box-border select-none">
+      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:40px_40px]" />
       
-      {/* TECHNICAL GRID OVERLAY */}
-      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
-
-      {/* ANIMATED AMBIENT AURORAS */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#8b5cf6]/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#00f2fe]/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
-
-      <header className="mb-10 relative z-10">
-        <h1 className="text-4xl font-serif tracking-widest uppercase mb-2 drop-shadow-lg">
-          Labyrinth <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">Overview</span>
+      <div className="relative z-10 my-auto max-w-5xl pt-8 pb-12">
+        <span className="text-xs font-mono text-[#00f2fe] uppercase tracking-[0.45em] block mb-4">SYSTEM DIRECTIVE // INTERFACE MATRIX</span>
+        <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tighter uppercase leading-[0.9] text-white mb-8">
+          Deconstruct <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/30 to-white/20">The Labyrinth.</span>
         </h1>
-        <p className="text-white/50 text-sm tracking-[0.2em] uppercase">System node architecture and timeline analysis</p>
-      </header>
+        <p className="text-lg md:text-xl font-medium text-gray-400 max-w-3xl leading-relaxed tracking-wide">
+          Helix tracks, coordinates, and models structural paradoxes across complex psychological layouts, tracking hidden thematic bridges between disparate non-linear timelines.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10 auto-rows-[220px]">
-        
-        <BentoCard className="md:col-span-2 lg:col-span-3 row-span-2" delay={0.1}>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-sm font-mono text-[#00f2fe] uppercase tracking-wider">Active Twist Topography</h2>
-            <div className="flex gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#00f2fe] animate-pulse" />
-              <span className="text-[10px] font-mono text-white/50 tracking-widest">LIVE</span>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 relative z-10 w-full mt-auto mb-16">
+        <div className="lg:col-span-3 border border-white/10 bg-black/40 backdrop-blur-md rounded-xl p-6 flex flex-col justify-between gap-8">
+          <div>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+              <div>
+                <h2 className="text-sm font-mono text-white uppercase tracking-wider font-bold">Narrative Paradox Link Finder</h2>
+                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest block mt-0.5">ALGORITHMIC TRANSVERSAL SYSTEM</span>
+              </div>
+              <Link to="/graph" className="w-max px-4 py-2 border border-white/20 hover:border-white rounded-lg font-mono text-[11px] tracking-widest uppercase transition-all bg-white/5">
+                EXPAND CORE SYSTEM →
+              </Link>
             </div>
-          </div>
-          <div className="flex-1 rounded-xl bg-black/40 border border-white/5 flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer">
-            <div className="absolute inset-0 opacity-20 transition-opacity duration-500 group-hover:opacity-40" 
-                 style={{ backgroundImage: 'radial-gradient(circle at center, #8b5cf6 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-            
-            <div className="w-32 h-32 rounded-full border border-[#8b5cf6]/30 flex items-center justify-center relative animate-[spin_20s_linear_infinite]">
-              <div className="w-24 h-24 rounded-full border border-[#00f2fe]/30 absolute top-2 left-2" />
-              <div className="w-16 h-16 rounded-full border border-[#ec4899]/30 absolute bottom-2 right-2" />
-            </div>
-            
-            <Link to="/graph" className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm">
-              <span className="px-6 py-2 border border-white/20 rounded-full font-mono text-sm tracking-widest hover:bg-white/10 transition-colors">ENTER FULL GRAPH</span>
-            </Link>
-          </div>
-        </BentoCard>
 
-        <BentoCard className="md:col-span-1 lg:col-span-1" delay={0.2}>
-          <h2 className="text-sm font-mono text-white/50 uppercase tracking-wider mb-6">Database Metrics</h2>
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between text-xs mb-2">
-                <span className="text-white/70 uppercase tracking-wider">Films Indexed</span>
-                <span className="text-[#8b5cf6] font-mono text-lg leading-none">1,402</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Source Core Node</label>
+                <select value={sourceMovie} onChange={(e) => setSourceMovie(e.target.value)} className="bg-black/80 border border-white/15 rounded-lg p-3 text-xs font-mono text-white focus:outline-none focus:border-[#00f2fe] cursor-pointer">
+                  {movies.map(m => <option key={m.id} value={m.id} disabled={m.id === targetMovie} className="bg-[#030014]">{m.title}</option>)}
+                </select>
               </div>
-              <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#8b5cf6] to-[#ec4899] w-[75%]" />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-2">
-                <span className="text-white/70 uppercase tracking-wider">Nodes Connected</span>
-                <span className="text-[#00f2fe] font-mono text-lg leading-none">8,943</span>
-              </div>
-              <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#00f2fe] to-[#4facfe] w-[45%]" />
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Target Destination</label>
+                <select value={targetMovie} onChange={(e) => setTargetMovie(e.target.value)} className="bg-black/80 border border-white/15 rounded-lg p-3 text-xs font-mono text-white focus:outline-none focus:border-[#ec4899] cursor-pointer">
+                  {movies.map(m => <option key={m.id} value={m.id} disabled={m.id === sourceMovie} className="bg-[#030014]">{m.title}</option>)}
+                </select>
               </div>
             </div>
           </div>
-        </BentoCard>
 
-        <BentoCard className="md:col-span-1 lg:col-span-1" delay={0.3}>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-sm font-mono text-white/50 uppercase tracking-wider">Recent Additions</h2>
-            <Link to="/library" className="text-[10px] text-white/40 hover:text-white transition-colors uppercase tracking-widest border-b border-white/20 pb-0.5">View All</Link>
-          </div>
-          <ul className="space-y-3 flex-1 overflow-hidden">
-            {recentMovies.map((movie, i) => (
-              <li key={i} className="flex items-center justify-between group p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded bg-black flex items-center justify-center border border-white/10 shadow-inner">
-                    <span className="text-[10px] font-mono text-white/50">{i + 1}</span>
-                  </div>
-                  <span className="text-sm text-white/80 group-hover:text-white transition-colors font-medium tracking-wide">{movie.title}</span>
+          <div className="bg-black/60 border border-white/5 rounded-lg p-5 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+            <div className="flex flex-col min-w-[140px]">
+              <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">ROOT AXIS</span>
+              <span className="font-serif font-black text-sm tracking-wider uppercase text-white mt-1 truncate">
+                {movies.find(m => m.id === sourceMovie)?.title}
+              </span>
+            </div>
+
+            <div className="flex-1 w-full flex flex-col items-center">
+              <div className="w-full flex justify-between text-[9px] font-mono text-[#00f2fe] mb-2 uppercase px-1 tracking-wide">
+                <span>{currentPath.path[0]}</span>
+                <span>{currentPath.path[1]}</span>
+              </div>
+              <div className="h-[1px] w-full bg-gradient-to-r from-[#00f2fe] via-[#8b5cf6] to-[#ec4899] relative">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2.5 py-0.5 bg-black border border-white/10 rounded font-mono text-[9px] text-white tracking-widest font-bold">
+                  {currentPath.match} SYMMETRY
                 </div>
-                <span className={`text-[10px] font-mono ${movie.color} opacity-0 group-hover:opacity-100 transition-opacity`}>{movie.twist}</span>
-              </li>
-            ))}
-          </ul>
-        </BentoCard>
+              </div>
+            </div>
 
+            <div className="flex flex-col md:items-end min-w-[140px] md:text-right">
+              <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">TERMINAL REF</span>
+              <span className="font-serif font-black text-sm tracking-wider uppercase text-white mt-1 truncate">
+                {movies.find(m => m.id === targetMovie)?.title}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <div className="border border-white/10 bg-black/40 backdrop-blur-md rounded-xl p-6 flex flex-col justify-between flex-1 gap-4">
+            <h2 className="text-xs font-mono text-gray-400 uppercase tracking-wider font-bold">Database Metrics</h2>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-[11px] mb-1 font-mono">
+                  <span className="text-gray-400 uppercase tracking-wider">Indexed Volumes</span>
+                  <span className="text-white font-bold">{movies.length}</span>
+                </div>
+                <div className="h-0.5 w-full bg-white/10 overflow-hidden">
+                  <div className="h-full bg-white w-[100%]" />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-[11px] mb-1 font-mono">
+                  <span className="text-gray-400 uppercase tracking-wider">Topology Intersects</span>
+                  <span className="text-white font-bold">8,943</span>
+                </div>
+                <div className="h-0.5 w-full bg-white/10 overflow-hidden">
+                  <div className="h-full bg-white/30 w-[45%]" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-white/10 bg-black/40 backdrop-blur-md rounded-xl p-6 flex flex-col justify-between flex-1 gap-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xs font-mono text-gray-400 uppercase tracking-wider font-bold">Recent Registry</h2>
+              <Link to="/library" className="text-[10px] text-gray-400 hover:text-white transition-colors uppercase font-mono tracking-wider border-b border-white/20 pb-0.5">VIEW ALL</Link>
+            </div>
+            <ul className="space-y-2">
+              {movies.slice(0, 2).map((movie) => (
+                <li key={movie.id} className="flex items-center justify-between p-2 rounded bg-white/5 font-mono text-[11px] tracking-wide">
+                  <span className="text-gray-300 truncate max-w-[130px] font-medium uppercase">{movie.title}</span>
+                  <span className="text-white font-bold">{movie.deviation}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

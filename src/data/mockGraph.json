@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    { "id": "Donnie Darko", "val": 20, "color": "#00f2fe" },
+    { "id": "The Sixth Sense", "val": 15, "color": "#ef4444" },
+    { "id": "Oldboy", "val": 25, "color": "#ec4899" },
+    { "id": "Taxi Driver", "val": 10, "color": "#8b5cf6" },
+    { "id": "Zodiac", "val": 15, "color": "#eab308" }
+  ],
+  "links": [
+    { "source": "Donnie Darko", "target": "The Sixth Sense" },
+    { "source": "Oldboy", "target": "Taxi Driver" },
+    { "source": "The Sixth Sense", "target": "Oldboy" },
+    { "source": "Zodiac", "target": "Taxi Driver" },
+    { "source": "Donnie Darko", "target": "Zodiac" }
+  ]
+}

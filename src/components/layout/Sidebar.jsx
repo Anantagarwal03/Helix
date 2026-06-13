@@ -5,6 +5,7 @@ import { playClickSound } from '../../utils/audio'
 const NAV = [
   {
     label: 'Overview',
+    path: '/overview',
     icon: (
       <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
         <path d="M7.5 1.5L13.5 5.5V13.5H9.5V9.5H5.5V13.5H1.5V5.5L7.5 1.5Z"
@@ -14,6 +15,7 @@ const NAV = [
   },
   {
     label: 'Graph',
+    path: '/graph',
     icon: (
       <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
         <circle cx="7.5" cy="7.5" r="3" stroke="currentColor" strokeWidth="1.2"/>
@@ -27,6 +29,7 @@ const NAV = [
   },
   {
     label: 'Library',
+    path: '/library',
     icon: (
       <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
         <rect x="1.5" y="2.5" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
@@ -45,9 +48,10 @@ const NAV = [
   },
 ]
 const NavItem = ({ item, index, active, isCollapsed, onClick, moviesCount }) => (
-  <button
+  <Link
+    to={item.path}
     id={`nav-${item.label.toLowerCase()}`}
-    onClick={() => { playClickSound(); onClick(index); }}
+    onClick={() => { playClickSound(); if(onClick) onClick(index); }}
     className={`group relative flex w-full items-center rounded-lg text-left transition-all duration-150 py-2.5 ${ isCollapsed ? 'justify-center px-0' : 'px-3 gap-2.5' } ${active ? 'text-white bg-white/5' : 'text-gray-400 hover:text-white hover:bg-white/[0.02]'}`}
     title={isCollapsed ? item.label : ''}
   >
@@ -81,7 +85,7 @@ const NavItem = ({ item, index, active, isCollapsed, onClick, moviesCount }) => 
         {item.label === 'Library' ? moviesCount : item.count}
       </span>
     )}
-  </button>
+  </Link>
 )
 
 export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsCollapsed, moviesCount }) {
@@ -142,10 +146,7 @@ export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsC
         )}
         <nav className="flex flex-col gap-1">
           {NAV.map((item, i) => {
-            const normalizedActiveSection = Number(activeSection)
-            const isActive = item.path 
-              ? location.pathname === item.path 
-              : (location.pathname === '/' && normalizedActiveSection === i)
+            const isActive = location.pathname === item.path
 
             return (
               <NavItem
@@ -155,17 +156,6 @@ export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsC
                 active={isActive}
                 isCollapsed={collapsed}
                 moviesCount={moviesCount}
-                onClick={() => {
-                  if (item.path) {
-                    navigate(item.path)
-                  } else {
-                    if (location.pathname !== '/graph') {
-                      navigate('/graph', { state: { scrollToSection: i } })
-                    } else {
-                      navigate('/graph', { state: { scrollToSection: i } })
-                    }
-                  }
-                }}
               />
             )
           })}

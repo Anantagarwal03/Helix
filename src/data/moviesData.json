@@ -1,0 +1,7 @@
+[
+  { "id": "1", "title": "Donnie Darko", "year": "2001", "deviation": "9.8", "type": "Timeline Fracture", "status": "Critical", "color": "#00f2fe" },
+  { "id": "2", "title": "Oldboy", "year": "2003", "deviation": "9.2", "type": "Psychological Collapse", "status": "High Impact", "color": "#ec4899" },
+  { "id": "3", "title": "The Sixth Sense", "year": "1999", "deviation": "8.5", "type": "Perception Shift", "status": "Stable Loop", "color": "#ef4444" },
+  { "id": "4", "title": "Taxi Driver", "year": "1976", "deviation": "7.9", "type": "Unreliable Narration", "status": "Delusion Vector", "color": "#8b5cf6" },
+  { "id": "5", "title": "Zodiac", "year": "2007", "deviation": "6.4", "type": "Obsession Obsfuscation", "status": "Unresolved", "color": "#eab308" }
+]
