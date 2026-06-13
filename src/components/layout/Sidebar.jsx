@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useState, useRef, useCallback } from 'react'
+import { useLocation, Link } from 'react-router-dom'
 import { playClickSound } from '../../utils/audio'
 
 const NAV = [
@@ -47,54 +47,90 @@ const NAV = [
     ),
   },
 ]
-const NavItem = ({ item, index, active, isCollapsed, onClick, moviesCount }) => (
-  <Link
-    to={item.path}
-    id={`nav-${item.label.toLowerCase()}`}
-    onClick={() => { playClickSound(); if(onClick) onClick(index); }}
-    className={`group relative flex w-full items-center rounded-lg text-left transition-all duration-150 py-2.5 ${ isCollapsed ? 'justify-center px-0' : 'px-3 gap-2.5' } ${active ? 'text-white bg-white/5' : 'text-gray-400 hover:text-white hover:bg-white/[0.02]'}`}
-    title={isCollapsed ? item.label : ''}
-  >
-    {active && (
-      <span
-        className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full"
-        style={{ background: 'linear-gradient(180deg, #00f2fe, #7c3aed)', boxShadow: '0 0 8px rgba(0,242,254,0.5)' }}
-      />
-    )}
 
-    <span
-      className="flex-shrink-0 flex items-center justify-center w-5 h-5"
-      style={{
-        color: active ? '#00f2fe' : 'inherit',
-        filter: active ? 'drop-shadow(0 0 5px rgba(0,242,254,0.8))' : 'none',
-        transition: 'filter 200ms, color 200ms',
-      }}
+const useMagnet = ({ strength = 0.35, ease = '0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)' } = {}) => {
+  const ref = useRef(null)
+  const [transform, setTransform] = useState('translate3d(0px, 0px, 0px)')
+
+  const onMouseMove = useCallback((e) => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const deltaX = (e.clientX - centerX) * strength
+    const deltaY = (e.clientY - centerY) * strength
+    setTransform(`translate3d(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px, 0px)`)
+  }, [strength])
+
+  const onMouseLeave = useCallback(() => {
+    setTransform('translate3d(0px, 0px, 0px)')
+  }, [])
+
+  return { ref, transform, ease, onMouseMove, onMouseLeave }
+}
+
+const MagneticNavItem = ({ item, active, isCollapsed, moviesCount }) => {
+  const { ref, transform, ease, onMouseMove, onMouseLeave } = useMagnet({ strength: 0.28 })
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+      style={{ transform, transition: `transform ${ease}`, willChange: 'transform' }}
     >
-      {item.icon}
-    </span>
+      <Link
+        to={item.path}
+        id={`nav-${item.label.toLowerCase()}`}
+        onClick={() => playClickSound()}
+        className={`group relative flex w-full items-center rounded-lg text-left transition-all duration-150 py-2.5 ${
+          isCollapsed ? 'justify-center px-0' : 'px-3 gap-2.5'
+        } ${active ? 'text-white bg-white/5' : 'text-gray-400 hover:text-white hover:bg-white/[0.02]'}`}
+        title={isCollapsed ? item.label : ''}
+      >
+        {active && (
+          <span
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full"
+            style={{
+              background: 'linear-gradient(180deg, #00f2fe, #7c3aed)',
+              boxShadow: '0 0 8px rgba(0,242,254,0.5)',
+            }}
+          />
+        )}
 
-    {!isCollapsed && (
-      <span className="text-sm font-medium tracking-wide flex-1 overflow-hidden whitespace-nowrap animate-[fadeIn_0.15s_ease-out]">
-        {item.label}
-      </span>
-    )}
+        <span
+          className="flex-shrink-0 flex items-center justify-center w-5 h-5"
+          style={{
+            color: active ? '#00f2fe' : 'inherit',
+            filter: active ? 'drop-shadow(0 0 5px rgba(0,242,254,0.8))' : 'none',
+            transition: 'filter 200ms, color 200ms',
+          }}
+        >
+          {item.icon}
+        </span>
 
-    {!isCollapsed && (item.count !== undefined || item.label === 'Library') && (
-      <span className="text-xs font-mono tabular-nums pr-1"
-        style={{ color: active ? 'rgba(0,242,254,0.8)' : '#94a3b8' }}>
-        {item.label === 'Library' ? moviesCount : item.count}
-      </span>
-    )}
-  </Link>
-)
+        {!isCollapsed && (
+          <span className="text-sm font-medium tracking-wide flex-1 overflow-hidden whitespace-nowrap animate-[fadeIn_0.15s_ease-out]">
+            {item.label}
+          </span>
+        )}
 
-export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsCollapsed, moviesCount }) {
-  const navigate = useNavigate()
+        {!isCollapsed && (item.count !== undefined || item.label === 'Library') && (
+          <span
+            className="text-xs font-mono tabular-nums pr-1"
+            style={{ color: active ? 'rgba(0,242,254,0.8)' : '#94a3b8' }}
+          >
+            {item.label === 'Library' ? moviesCount : item.count}
+          </span>
+        )}
+      </Link>
+    </div>
+  )
+}
+
+export default function Sidebar({ moviesCount }) {
   const location = useLocation()
-  const [internalCollapsed, setInternalCollapsed] = useState(false)
-
-  const collapsed = isCollapsed !== undefined ? isCollapsed : internalCollapsed;
-  const setCollapsed = setIsCollapsed !== undefined ? setIsCollapsed : setInternalCollapsed;
+  const [collapsed, setCollapsed] = useState(false)
 
   return (
     <aside
@@ -107,12 +143,16 @@ export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsC
         borderRight: '1px solid rgba(255,255,255,0.05)',
       }}
     >
-      <div className="absolute top-0 left-0 right-0 h-24 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(0,242,254,0.04) 0%, transparent 100%)' }} />
+      <div
+        className="absolute top-0 left-0 right-0 h-24 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(0,242,254,0.04) 0%, transparent 100%)' }}
+      />
 
-      <div className="flex-shrink-0 min-h-[65px] px-3 py-4 flex items-center justify-between gap-1 w-full box-border"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        
+      {/* Logo / header */}
+      <div
+        className="flex-shrink-0 min-h-[65px] px-3 py-4 flex items-center justify-between gap-1 w-full box-border"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+      >
         {!collapsed ? (
           <Link to="/" className="flex items-center gap-2.5 overflow-hidden flex-1 min-w-0 pl-1">
             <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
@@ -138,6 +178,7 @@ export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsC
         </button>
       </div>
 
+      {/* Navigation */}
       <div className={`flex-1 overflow-y-auto py-3 ${collapsed ? 'px-1.5' : 'px-2'}`}>
         {!collapsed && (
           <p className="px-3 mb-2 text-[9px] font-medium text-gray-500 uppercase tracking-[0.12em]">
@@ -145,20 +186,15 @@ export default function Sidebar({ activeSection, onNavigate, isCollapsed, setIsC
           </p>
         )}
         <nav className="flex flex-col gap-1">
-          {NAV.map((item, i) => {
-            const isActive = location.pathname === item.path
-
-            return (
-              <NavItem
-                key={item.label}
-                item={item}
-                index={i}
-                active={isActive}
-                isCollapsed={collapsed}
-                moviesCount={moviesCount}
-              />
-            )
-          })}
+          {NAV.map((item) => (
+            <MagneticNavItem
+              key={item.label}
+              item={item}
+              active={location.pathname === item.path}
+              isCollapsed={collapsed}
+              moviesCount={moviesCount}
+            />
+          ))}
         </nav>
       </div>
     </aside>
