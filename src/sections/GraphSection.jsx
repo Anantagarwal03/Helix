@@ -1,16 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import GlitchText from '../components/animations/GlitchText';
+import { useState, useCallback, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DecryptedText from '../components/animations/DecryptedText';
 import TwistGraph3D, { INITIAL_GRAPH_DATA } from '../components/TwistGraph3D';
 import { MOVIES } from '../data/movies';
 
-const FILM_COLOR = { ss: '#00f2fe', dd: '#8b5cf6', z: '#ec4899' };
-const FILM_NAME = { ss: 'The Sixth Sense', dd: 'Donnie Darko', z: 'Zodiac' };
-
-const SideRevealPanel = ({ node, onClose }) => {
+const SideRevealPanel = ({ node, onClose, spoilerLevel, selectedConnectionId }) => {
   const open = !!node;
-  const color = node ? (FILM_COLOR[node.film] || '#00f2fe') : '#00f2fe';
-  const filmLabel = node ? (FILM_NAME[node.film] || node.filmName || '') : '';
+  const color = node?.filmColor || '#00f2fe';
+  const filmLabel = node?.filmName || '';
 
   return (
     <>
@@ -75,7 +72,7 @@ const SideRevealPanel = ({ node, onClose }) => {
 
               <div className="flex flex-col gap-3">
                 <p className="text-[9.5px] font-mono text-slate-700 uppercase tracking-[0.14em]">
-                  Narrative Reveal
+                  {node.type === 'twist' ? 'Twist explanation' : 'Story explanation'}
                 </p>
                 <div style={{ borderLeft: `2px solid ${color}35`, paddingLeft: '16px' }}>
                   <p className="text-[17px] font-bold text-white leading-snug tracking-tight">
@@ -106,6 +103,33 @@ const SideRevealPanel = ({ node, onClose }) => {
                 </div>
               )}
 
+              {node.timelineStage && (
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-slate-600">Story order</span>
+                  <span>{node.timelineOrder}. {node.timelineStage}</span>
+                </div>
+              )}
+
+              {node.relationships?.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  <p className="text-[9.5px] font-mono text-slate-700 uppercase tracking-[0.14em]">Why it connects</p>
+                  {node.relationships.map(relation => (
+                    <div key={relation.id} className="rounded-lg p-3 transition-colors" style={{ background: relation.id === selectedConnectionId ? `${color}12` : 'rgba(255,255,255,0.025)', border: `1px solid ${relation.id === selectedConnectionId ? `${color}80` : 'rgba(255,255,255,0.06)'}` }}>
+                      <p className="text-[10px] font-mono uppercase tracking-wider" style={{ color }}>{relation.relationship} · {relation.direction}</p>
+                      <p className="text-xs text-slate-300 mt-1">{relation.otherLabel}</p>
+                      <p className="text-[11px] text-slate-500 leading-relaxed mt-1">{relation.explanation}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {spoilerLevel >= 2 && node.sources?.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[9.5px] font-mono text-slate-700 uppercase tracking-[0.14em]">References</p>
+                  {node.sources.map(source => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="text-[11px] text-cyan-300 hover:text-cyan-200 underline">{source.label} ↗</a>)}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3 pt-2"
                 style={{ borderTop: '1px solid rgba(255,255,255,0.05)', animation: 'fadeIn 0.5s ease 1.1s both', opacity: 0 }}>
                 {[
@@ -121,17 +145,6 @@ const SideRevealPanel = ({ node, onClose }) => {
                 ))}
               </div>
 
-              {node.type === 'twist' && (
-                <div className="rounded-xl p-4 flex flex-col gap-1.5"
-                  style={{ background: `${color}06`, border: `1px solid ${color}15`, animation: 'fadeIn 0.5s ease 1.3s both', opacity: 0 }}>
-                  <p className="text-[9.5px] font-mono uppercase tracking-[0.12em]" style={{ color: `${color}60` }}>
-                    Cross-Film Bridge
-                  </p>
-                  <p className="text-[11.5px] text-slate-500 leading-relaxed">
-                    This Twist node is connected to the other two Core Twists via thematic bridge edges — exploring how each film's central deception relates to the others.
-                  </p>
-                </div>
-              )}
             </div>
 
             <div className="flex-shrink-0 px-6 py-4"
@@ -165,150 +178,298 @@ const LegendDot = ({ color, label }) => (
   </div>
 );
 
-const GraphSection = ({ initialNode }) => {
-  const [mounted, setMounted] = useState(false);
+const StoryTimeline = ({ nodes, selectedNodeId, onSelect }) => (
+  <div data-reveal className="relative flex-shrink-0 h-[48vh] min-h-[340px] max-h-[620px] rounded-xl overflow-y-auto px-4 md:px-7 py-5"
+    style={{ background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="flex items-center justify-between gap-4 mb-5">
+      <div>
+        <h3 className="text-sm font-semibold text-white">Story timeline</h3>
+        <p className="text-[10px] font-mono text-slate-500 mt-1">Select a beat to read its context and related connections.</p>
+      </div>
+      <span className="text-[10px] font-mono text-slate-400">{nodes.length} beats</span>
+    </div>
+    {nodes.length ? (
+      <ol className="relative ml-2 border-l border-violet-400/20">
+        {nodes.map((node, index) => {
+          const color = node.type === 'character' ? '#00f2fe' : node.type === 'event' ? '#8b5cf6' : '#ec4899';
+          const selected = node.id === selectedNodeId;
+          return (
+            <li key={node.id} className="relative pl-7 pb-4 last:pb-0">
+              <span className="absolute -left-[5px] top-4 w-[9px] h-[9px] rounded-full ring-4 ring-[#080516]"
+                style={{ background: color, boxShadow: `0 0 10px ${color}80` }} />
+              <button type="button" onClick={() => onSelect(node)} aria-label={`Open story beat ${node.timelineOrder || index + 1}: ${node.label}`}
+                className="w-full rounded-lg px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
+                style={{ background: selected ? `${color}12` : 'rgba(255,255,255,0.025)', border: `1px solid ${selected ? `${color}55` : 'rgba(255,255,255,0.06)'}` }}>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-[9px] font-mono text-slate-500">{String(node.timelineOrder || index + 1).padStart(2, '0')}</span>
+                  <span className="text-[9px] font-mono uppercase tracking-wider" style={{ color }}>{node.type}{node.isContext ? ' · context' : ''}</span>
+                  <span className="text-[9px] font-mono text-slate-600">{node.timelineStage || 'Story beat'}</span>
+                </div>
+                <span className="block text-xs font-semibold text-slate-100 mt-1">{node.label}</span>
+                {(node.revealSubtext || node.revealText) && <span className="block text-[10px] leading-relaxed text-slate-400 mt-1">{node.revealSubtext || node.revealText}</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    ) : (
+      <p className="rounded-lg border border-white/[0.06] bg-white/[0.025] px-4 py-5 text-xs text-slate-400">Turn on a node type to show story beats in the timeline.</p>
+    )}
+  </div>
+);
+
+const SPOILER_LEVELS = {
+  'sixth-sense': 0, 'ss-malcolm': 0, 'ss-cole': 0, 'ss-anna': 0,
+  'ss-vincent': 1, 'ss-confession': 1, 'ss-kyra': 1, 'ss-shooting': 2, 'ss-ring': 2, 'ss-twist': 2,
+  'donnie-darko': 0, 'dd-donnie': 0, 'dd-gretchen': 0,
+  'dd-countdown': 1, 'dd-engine': 1, 'dd-flooding': 1, 'dd-book': 1,
+  'dd-frank': 2, 'dd-gretchen-death': 2, 'dd-frank-shot': 2, 'dd-twist': 2,
+  zodiac: 0, 'z-robert': 0, 'z-attacks': 1, 'z-cipher': 1, 'z-avery': 1, 'z-cipher-solved': 1, 'z-allen': 1, 'z-case-stalls': 2, 'z-twist': 2,
+  'taxi-driver': 0, 'td-travis': 0, 'td-night-shifts': 0, 'td-betsy': 0, 'td-diner': 1, 'td-iris': 1, 'td-weapons': 1, 'td-palantine': 2, 'td-shootout': 2, 'td-twist': 2,
+  oldboy: 0, 'ob-captivity': 0, 'ob-daesu': 0, 'ob-release': 0, 'ob-miha': 1, 'ob-hunt': 1, 'ob-woojin': 2, 'ob-ultimatum': 2, 'ob-twist': 2,
+};
+
+const SPOILER_FREE_COPY = {
+  'sixth-sense': { revealText: 'Story map: The Sixth Sense', revealSubtext: 'Explore its characters and story connections.' },
+  'ss-malcolm': { revealText: 'A child psychologist working with Cole', revealSubtext: 'Malcolm is trying to help Cole while rebuilding his relationship with his wife.' },
+  'ss-cole': { revealText: 'A boy coping with frightening experiences', revealSubtext: 'Cole struggles to explain what is happening to him.' },
+  'ss-anna': { revealText: 'Malcolm’s wife', revealSubtext: 'Malcolm believes Anna has become distant from him.' },
+  'donnie-darko': { revealText: 'Story map: Donnie Darko', revealSubtext: 'Explore its characters and story connections.' },
+  'dd-donnie': { revealText: 'A teenager facing strange experiences', revealSubtext: 'Donnie’s story begins with a series of unsettling events.' },
+  'dd-gretchen': { revealText: 'A new student who connects with Donnie', revealSubtext: 'Gretchen becomes part of Donnie’s life as unusual events begin to unfold.' },
+  zodiac: { revealText: 'Story map: Zodiac', revealSubtext: 'Explore its characters and story connections.' },
+  'z-robert': { revealText: 'A cartoonist drawn into a murder investigation', revealSubtext: 'Robert becomes increasingly interested in the Zodiac case.' },
+  'td-night-shifts': { revealText: 'Travis’s overnight routine', revealSubtext: 'His cab shifts take him through the city after dark.' },
+  'td-betsy': { revealText: 'A campaign worker Travis admires', revealSubtext: 'Travis tries to build a connection with Betsy.' },
+  'taxi-driver': { revealText: 'Story map: Taxi Driver', revealSubtext: 'Explore its characters and story connections.' },
+  'td-travis': { revealText: 'A cab driver struggling with isolation', revealSubtext: 'Travis finds it difficult to connect with the people around him.' },
+  oldboy: { revealText: 'Story map: Oldboy', revealSubtext: 'Explore its characters and story connections.' },
+  'ob-captivity': { revealText: 'A man disappears without explanation', revealSubtext: 'His sudden confinement begins the story’s mystery.' },
+  'ob-daesu': { revealText: 'A man searching for answers after his release', revealSubtext: 'Dae-su tries to understand what happened to him.' },
+  'ob-release': { revealText: 'An unexplained release', revealSubtext: 'Dae-su is freed without being told why he was imprisoned.' },
+};
+
+const SPOILER_OPTIONS = [
+  { label: 'Spoiler-free', level: 0 },
+  { label: 'Some spoilers', level: 1 },
+  { label: 'Full story', level: 2 },
+];
+
+const GraphSection = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const routeFilmId = searchParams.get('film');
+  const [selectedFilmId, setSelectedFilmId] = useState(() => MOVIES.some(movie => movie.id === routeFilmId) ? routeFilmId : MOVIES[0].id);
+  const [visibleTypes, setVisibleTypes] = useState(['character', 'event', 'twist']);
+  const [spoilerLevel, setSpoilerLevel] = useState(0);
+  const [viewMode, setViewMode] = useState('map');
   const [selectedNode, setSelectedNode] = useState(null);
-  const [graphData, setGraphData] = useState(INITIAL_GRAPH_DATA);
-  const [movies, setMovies] = useState(MOVIES);
-  const EVENTS = movies.map(m => ({
-    film: m.id,
-    filmName: m.title,
-    char: m.director,
-    event: m.complexity || m.twistType || 'Mind-Bend Twist',
-    color: m.accentColor || '#8b5cf6',
-    nodeIds: [m.id + '-twist']
-  }));
-
-  const handleGraphMount = useCallback(() => setMounted(true), []);
-  const handleNodeClick = useCallback(node => setSelectedNode(node), []);
-  const closePanel = useCallback(() => setSelectedNode(null), []);
+  const [selectedConnectionId, setSelectedConnectionId] = useState(null);
   const graphRef = useRef(null);
+  const selectedFilm = MOVIES.find(movie => movie.id === selectedFilmId) || MOVIES[0];
 
-  const handleTableNodeTarget = (filmSlugId) => {
-    const graphInstance = graphRef.current;
-    if (!graphInstance) return;
+  const graphData = useMemo(() => {
+    const filmLinks = INITIAL_GRAPH_DATA.links.filter(link => link.film === selectedFilm.id);
+    const filmNodeIds = new Set([selectedFilm.id]);
+    filmLinks.forEach(link => {
+      filmNodeIds.add(typeof link.source === 'object' ? link.source.id : link.source);
+      filmNodeIds.add(typeof link.target === 'object' ? link.target.id : link.target);
+    });
+    const availableNodes = INITIAL_GRAPH_DATA.nodes.filter(node => filmNodeIds.has(node.id)
+      && (SPOILER_LEVELS[node.id] ?? 2) <= spoilerLevel);
+    const filmStoryNodes = INITIAL_GRAPH_DATA.nodes.filter(node => filmNodeIds.has(node.id) && node.type !== 'film');
+    const storyOrder = new Map(filmStoryNodes.map((node, index) => [node.id, node.timelineOrder || index + 1]));
+    const sameBeatOffset = new Map();
+    ['character', 'event', 'twist'].forEach(type => {
+      const orders = [...new Set(filmStoryNodes.filter(node => node.type === type).map(node => storyOrder.get(node.id)))];
+      orders.forEach(order => {
+        const beatNodes = filmStoryNodes.filter(node => node.type === type && storyOrder.get(node.id) === order);
+        beatNodes.forEach((node, index) => sameBeatOffset.set(node.id, (index - (beatNodes.length - 1) / 2) * 28));
+      });
+    });
+    const availableIds = new Set(availableNodes.map(node => node.id));
+    const focusIds = new Set(availableNodes
+      .filter(node => visibleTypes.includes(node.type))
+      .map(node => node.id));
+    const contextIds = new Set([selectedFilm.id, ...focusIds]);
+    filmLinks.forEach(link => {
+      const source = typeof link.source === 'object' ? link.source.id : link.source;
+      const target = typeof link.target === 'object' ? link.target.id : link.target;
+      if (focusIds.has(source) && availableIds.has(target)) contextIds.add(target);
+      if (focusIds.has(target) && availableIds.has(source)) contextIds.add(source);
+    });
+    const baseNodes = availableNodes
+      .filter(node => contextIds.has(node.id))
+      .map(node => {
+        const order = storyOrder.get(node.id) || 1;
+        const x = node.type === 'film' ? -165 : -85 + (order - 1) * 55;
+        const stagger = order % 2 === 0 ? 26 : -26;
+        const y = node.type === 'character' ? 90 + stagger + (sameBeatOffset.get(node.id) || 0)
+          : node.type === 'event' ? stagger + (sameBeatOffset.get(node.id) || 0)
+            : node.type === 'twist' ? -90 : 0;
+        return {
+          ...node,
+          ...(spoilerLevel === 0 ? SPOILER_FREE_COPY[node.id] : {}),
+          spoilerLevel: SPOILER_LEVELS[node.id] ?? 2,
+          isContext: node.type !== 'film' && !focusIds.has(node.id),
+          film: selectedFilm.id,
+          filmName: selectedFilm.title,
+          filmColor: selectedFilm.accentColor,
+          x, y, z: 0,
+          fx: x, fy: y, fz: 0,
+        };
+      });
+    const visibleIds = new Set(baseNodes.map(node => node.id));
+    const links = filmLinks.filter(link => {
+      const source = typeof link.source === 'object' ? link.source.id : link.source;
+      const target = typeof link.target === 'object' ? link.target.id : link.target;
+      return visibleIds.has(source) && visibleIds.has(target);
+    });
+    const namesById = new Map(baseNodes.map(node => [node.id, node.label]));
+    const nodes = baseNodes.map(node => ({
+      ...node,
+      relationships: links.filter(link => {
+        const source = typeof link.source === 'object' ? link.source.id : link.source;
+        const target = typeof link.target === 'object' ? link.target.id : link.target;
+        return source === node.id || target === node.id;
+      }).map(link => {
+        const source = typeof link.source === 'object' ? link.source.id : link.source;
+        const target = typeof link.target === 'object' ? link.target.id : link.target;
+        const outgoing = source === node.id;
+        const otherId = outgoing ? target : source;
+        return {
+          id: `${source}-${target}`,
+          relationship: link.relationship || 'connects to',
+          direction: outgoing ? 'outgoing' : 'incoming',
+          otherLabel: namesById.get(otherId) || otherId,
+          explanation: link.explanation || 'This story connection has not been described yet.',
+        };
+      }),
+    }));
+    return { nodes, links };
+  }, [selectedFilm, visibleTypes, spoilerLevel]);
 
-    const targetHub = graphData.nodes.find(node => node.id === filmSlugId && node.type === 'film');
-    if (!targetHub) return;
-
-    const viewDistance = 130;
-    const vectorAngle = Math.atan2(targetHub.z || 0, targetHub.x || 0);
-
-    graphInstance.cameraPosition(
-      {
-        x: (targetHub.x || 0) + viewDistance * Math.cos(vectorAngle),
-        y: (targetHub.y || 0) + 35,
-        z: (targetHub.z || 0) + viewDistance * Math.sin(vectorAngle)
-      },
-      { x: targetHub.x || 0, y: targetHub.y || 0, z: targetHub.z || 0 },
-      1000
-    );
+  const graphNodesById = useMemo(() => new Map(graphData.nodes.map(node => [node.id, node])), [graphData]);
+  const selectableNodes = graphData.nodes.filter(node => node.type !== 'film').sort((a, b) => (a.timelineOrder || 99) - (b.timelineOrder || 99));
+  const closePanel = useCallback(() => { setSelectedNode(null); setSelectedConnectionId(null); }, []);
+  const handleNodeClick = useCallback(node => { setSelectedNode(node); setSelectedConnectionId(null); }, []);
+  const handleLinkClick = useCallback(link => {
+    const source = typeof link.source === 'object' ? link.source : graphNodesById.get(link.source);
+    const target = typeof link.target === 'object' ? link.target : graphNodesById.get(link.target);
+    const center = {
+      x: ((source?.x || 0) + (target?.x || 0)) / 2,
+      y: ((source?.y || 0) + (target?.y || 0)) / 2,
+      z: ((source?.z || 0) + (target?.z || 0)) / 2,
+    };
+    if (source && target) {
+      graphRef.current?.cameraPosition({ x: center.x, y: center.y + 25, z: center.z + 125 }, center, 550);
+    }
+    setSelectedConnectionId(`${source?.id || link.source}-${target?.id || link.target}`);
+    setSelectedNode(source || target || null);
+  }, [graphNodesById]);
+  const toggleType = type => {
+    setVisibleTypes(current => current.includes(type) ? current.filter(item => item !== type) : [...current, type]);
+    setSelectedNode(null);
+    setSelectedConnectionId(null);
   };
 
-  const highlightedRow = selectedNode
-    ? EVENTS.findIndex(e => e.nodeIds.includes(selectedNode.id))
-    : -1;
+  const focusNode = node => {
+    setSelectedNode(node);
+    setSelectedConnectionId(null);
+    if (Number.isFinite(node.x) && Number.isFinite(node.y) && Number.isFinite(node.z)) {
+      graphRef.current?.cameraPosition(
+        { x: node.x + 45, y: node.y + 30, z: node.z + 45 },
+        { x: node.x, y: node.y, z: node.z },
+        700,
+      );
+    }
+  };
+
+  const selectTimelineNode = node => {
+    setSelectedNode(node);
+    setSelectedConnectionId(null);
+  };
+
+  const toggleFilter = type => toggleType(type);
+  const filters = [
+    ['character', 'Characters', '#00f2fe'],
+    ['event', 'Events', '#8b5cf6'],
+    ['twist', 'Twists', '#ec4899'],
+  ];
 
   return (
-    <div className="relative w-full h-full flex flex-col px-8 py-8 gap-4 overflow-hidden">
-      <div data-reveal className="flex items-center justify-between flex-shrink-0">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <span className="w-5 h-px" style={{ background: 'linear-gradient(90deg,#7c3aed,transparent)' }} />
-            <span className="text-[10px] font-mono text-violet-400/50 uppercase tracking-[0.18em]">02 — The Labyrinth</span>
-          </div>
-          <h2 className="text-[26px] font-bold text-white tracking-tight leading-none mt-1">
-            <GlitchText speed={0.5} enableShadows={true} enableOnHover={true}>Twist Graph</GlitchText>
-            {' '}
-            <span style={{ background: 'linear-gradient(135deg,#7c3aed,#ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              3D Engine
-            </span>
-          </h2>
+    <div className="relative w-full min-h-full flex flex-col px-5 md:px-8 py-6 md:py-8 gap-4 overflow-y-auto">
+      <div data-reveal className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 flex-shrink-0">
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-mono text-violet-300/70 uppercase tracking-[0.18em]">02 — One film at a time</span>
+          <h2 className="text-[26px] font-bold text-white tracking-tight leading-none mt-1">Story Graph</h2>
+          <p className="text-xs text-slate-400 mt-1">Explore the story map or follow its beats in chronological order.</p>
         </div>
+        <label className="flex flex-col gap-1 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+          Film
+          <select value={selectedFilmId} onChange={event => { setSelectedFilmId(event.target.value); setSearchParams({ film: event.target.value }); setSelectedNode(null); setSelectedConnectionId(null); }} className="min-w-56 rounded-lg px-3 py-2 text-sm normal-case tracking-normal text-white bg-black/50 border border-white/10 focus:outline-none focus:border-cyan-400/50">
+            {MOVIES.map(movie => <option key={movie.id} value={movie.id}>{movie.title} ({movie.year})</option>)}
+          </select>
+        </label>
       </div>
 
-      <div data-reveal className="flex-1 min-h-0 relative rounded-xl overflow-hidden"
-        style={{ background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.05)' }}>
-
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5"
-          style={{ background: 'rgba(3,0,20,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '8px 12px' }}>
-          <LegendDot color="#fbbf24" label="Film Hub" />
-          <LegendDot color="#00f2fe" label="Character" />
-          <LegendDot color="#8b5cf6" label="Event" />
-          <LegendDot color="#ec4899" label="Twist" />
-        </div>
-
-        <div className="absolute top-16 right-3 z-10 flex items-center gap-3 px-3 py-1.5 rounded-lg"
-          style={{ background: 'rgba(3,0,20,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          {[['22', 'nodes'], ['31', 'links'], [`${movies.length}`, 'films']].map(([v, l]) => (
-            <div key={l} className="text-center">
-              <p className="text-[12px] font-bold text-white/80 tabular-nums leading-none">{v}</p>
-              <p className="text-[9px] font-mono text-slate-700 uppercase tracking-wide mt-0.5">{l}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 px-4 py-2 rounded-full"
-          style={{ background: 'rgba(3,0,20,0.70)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', border: '1px solid rgba(255,255,255,0.07)', whiteSpace: 'nowrap' }}>
-          {[
-            ['Left-Click', 'Orbit'],
-            ['Right-Click', 'Pan'],
-            ['Scroll', 'Zoom'],
-          ].map(([key, action], i) => (
-            <div key={key} className="flex items-center gap-1.5">
-              {i > 0 && <span className="text-slate-800 text-xs">·</span>}
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                {key}
-              </span>
-              <span className="text-[10px] font-mono text-slate-600">{action}</span>
-            </div>
-          ))}
-        </div>
-
-        <TwistGraph3D ref={graphRef} graphData={graphData} movies={movies} onMount={handleGraphMount} onNodeClick={handleNodeClick} initialNode={initialNode} />
+      <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Spoilers</span>
+        {SPOILER_OPTIONS.map(option => {
+          const active = spoilerLevel === option.level;
+          return <button key={option.level} type="button" aria-pressed={active} onClick={() => { setSpoilerLevel(option.level); setSelectedNode(null); setSelectedConnectionId(null); }} className="rounded-full px-3 py-1.5 text-[10px] font-mono border transition-colors" style={{ color: active ? '#fbbf24' : '#64748b', borderColor: active ? 'rgba(251,191,36,.45)' : 'rgba(255,255,255,.08)', background: active ? 'rgba(251,191,36,.08)' : 'transparent' }}>{option.label}</button>;
+        })}
+        <span className="w-px h-5 bg-white/10 mx-1" />
+        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Focus</span>
+        {filters.map(([type, label, color]) => {
+          const active = visibleTypes.includes(type);
+          return <button key={type} type="button" aria-pressed={active} onClick={() => toggleFilter(type)} className="rounded-full px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider border transition-colors" style={{ color: active ? color : '#64748b', borderColor: active ? `${color}55` : 'rgba(255,255,255,.08)', background: active ? `${color}10` : 'transparent' }}>{label}</button>;
+        })}
+        <span className="w-px h-5 bg-white/10 mx-1" />
+        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">View</span>
+        {[['map', 'Map'], ['timeline', 'Timeline']].map(([mode, label]) => {
+          const active = viewMode === mode;
+          return <button key={mode} type="button" aria-pressed={active} onClick={() => setViewMode(mode)}
+            className="rounded-full px-3 py-1.5 text-[10px] font-mono border transition-colors"
+            style={{ color: active ? '#67e8f9' : '#64748b', borderColor: active ? 'rgba(103,232,249,.4)' : 'rgba(255,255,255,.08)', background: active ? 'rgba(103,232,249,.08)' : 'transparent' }}>{label}</button>;
+        })}
+        <span className="ml-auto text-[10px] font-mono text-slate-500">{graphData.nodes.length} nodes · {graphData.links.length} connections</span>
       </div>
 
-      <div data-reveal className="flex-shrink-0">
+      <p className="-mt-2 text-[10px] font-mono text-slate-500">{viewMode === 'map' ? 'Map labels are shortened for clarity. Hover a node for its full name; hover or click a connection for its explanation.' : 'Beats follow story order; character entries mark where their story threads enter the timeline.'} {spoilerLevel < 2 && 'The ending reveal stays hidden until Full story is selected.'}</p>
+
+      {viewMode === 'map' ? <div data-reveal className="relative rounded-xl overflow-hidden flex-shrink-0 h-[48vh] min-h-[340px] max-h-[620px]" style={{ background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 rounded-lg px-3 py-2 bg-[#030014]/80 border border-white/10">
+          <LegendDot color={selectedFilm.accentColor} label="Film" />
+          {filters.filter(([type]) => graphData.nodes.some(node => node.type === type)).map(([type, label, color]) => <LegendDot key={label} color={color} label={`${label}${visibleTypes.includes(type) ? '' : ' · context'}`} />)}
+        </div>
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 px-4 py-2 rounded-full bg-[#030014]/80 border border-white/10 whitespace-nowrap">
+          {[['Left-click', 'select'], ['Drag', 'orbit'], ['Scroll', 'zoom']].map(([key, action], index) => <div key={key} className="flex items-center gap-1.5">{index > 0 && <span className="text-slate-700">·</span>}<span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300">{key}</span><span className="text-[9px] font-mono text-slate-500">{action}</span></div>)}
+        </div>
+        <TwistGraph3D ref={graphRef} graphData={graphData} onNodeClick={handleNodeClick} onLinkClick={handleLinkClick} />
+      </div> : <StoryTimeline nodes={selectableNodes} selectedNodeId={selectedNode?.id} onSelect={selectTimelineNode} />}
+
+      {viewMode === 'map' && <div data-reveal className="flex-shrink-0">
         <GlassPanel style={{ padding: 0, overflow: 'hidden' }}>
-          <div className="px-4 py-2.5 flex items-center justify-between"
-            style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
-            <div className="flex items-center gap-2">
-              <h3 className="text-[11.5px] font-semibold text-white/70 tracking-tight">Twist Events</h3>
-              <span className="text-[10px] font-mono text-slate-400">· {movies.length} films · 22 nodes · 31 links</span>
-            </div>
-            <button className="text-[10.5px] font-mono text-slate-300 hover:text-white transition-colors">Full table →</button>
+          <div className="px-4 py-3 flex items-center justify-between gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div><h3 className="text-[12px] font-semibold text-white/80">{selectedFilm.title}: story nodes</h3><p className="text-[10px] font-mono text-slate-500 mt-1">Select a row to focus and read its context.</p></div>
+            <span className="text-[10px] font-mono text-slate-400">{selectableNodes.length} shown</span>
           </div>
-          {EVENTS.map((row, i) => {
-            const hi = highlightedRow === i;
-            return (
-              <div key={i}
-                className="flex items-center gap-4 px-4 py-2 cursor-pointer hover:bg-white/5 transition-all animate-none"
-                onClick={() => handleTableNodeTarget(row.filmName.toLowerCase().replace(/\s+/g, '-'))}
-                style={{
-                  borderBottom: i < EVENTS.length - 1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none',
-                  background: hi ? `${row.color}08` : 'transparent',
-                  borderLeft: `2px solid ${hi ? row.color + '55' : 'transparent'}`,
-                }}>
-                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all duration-200"
-                  style={{ background: row.color, boxShadow: hi ? `0 0 8px ${row.color}` : 'none', transform: hi ? 'scale(1.5)' : 'scale(1)' }} />
-                <span className="text-[12px] font-medium w-32 flex-shrink-0 truncate transition-colors duration-200"
-                  style={{ color: hi ? '#fff' : '#cbd5e1' }}>{row.filmName}</span>
-                <span className="text-[11px] font-mono flex-shrink-0 transition-colors duration-200"
-                  style={{ color: hi ? `${row.color}cc` : `${row.color}99`, width: 120 }}>{row.char}</span>
-                <span className="text-[11px] flex-1 truncate transition-colors duration-200"
-                  style={{ color: hi ? '#f8fafc' : '#94a3b8' }}>{row.event}</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full flex-shrink-0 transition-all duration-200"
-                  style={{ color: row.color, background: hi ? `${row.color}18` : `${row.color}08`, border: `1px solid ${hi ? row.color + '40' : row.color + '16'}` }}>
-                  {hi ? '▶ active' : 'indexed'}
-                </span>
-              </div>
-            );
-          })}
+          <div className="max-h-56 overflow-y-auto">
+            {selectableNodes.map(node => {
+              const active = selectedNode?.id === node.id;
+              const color = node.type === 'character' ? '#00f2fe' : node.type === 'event' ? '#8b5cf6' : '#ec4899';
+              return <button key={node.id} type="button" onClick={() => focusNode(graphNodesById.get(node.id) || node)} className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-white/5 border-b border-white/[0.04]" style={{ background: active ? `${color}10` : 'transparent' }}>
+                <span className="mt-1.5 w-2 h-2 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 8px ${color}80` }} />
+                <span className="min-w-0 flex-1"><span className="block text-xs font-medium text-slate-200">{node.label}</span><span className="block text-[10px] text-slate-500 mt-1 line-clamp-2">{node.revealSubtext || node.revealText}</span></span>
+                <span className="text-[9px] font-mono uppercase tracking-wider flex-shrink-0 text-right" style={{ color }}>{node.type}{node.isContext && <span className="block text-slate-600 mt-1">context</span>}</span>
+              </button>;
+            })}
+            {!selectableNodes.length && <p className="px-4 py-6 text-xs text-slate-500">Turn on a node type to show its entries.</p>}
+          </div>
         </GlassPanel>
-      </div>
+      </div>}
 
-      <SideRevealPanel node={selectedNode} onClose={closePanel} />
+      <SideRevealPanel node={selectedNode} onClose={closePanel} spoilerLevel={spoilerLevel} selectedConnectionId={selectedConnectionId} />
     </div>
   );
 };

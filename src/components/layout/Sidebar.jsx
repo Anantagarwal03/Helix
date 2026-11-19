@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useLocation, Link } from 'react-router-dom'
 import { playClickSound } from '../../utils/audio'
+import { isNavItemActive } from '../../utils/navigation'
 
 const NAV = [
   {
@@ -135,7 +136,7 @@ const MagneticNavItem = ({ item, active, isCollapsed, moviesCount }) => {
 export default function Sidebar({ moviesCount }) {
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
-  const activeItem = NAV.find(n => location.pathname === n.path)
+  const activeItem = NAV.find(item => isNavItemActive(location.pathname, item))
   const activeAccent = activeItem?.accent || '#00f2fe'
 
   return (
@@ -234,7 +235,7 @@ export default function Sidebar({ moviesCount }) {
               <MagneticNavItem
                 key={item.label}
                 item={item}
-                active={location.pathname === item.path}
+                active={isNavItemActive(location.pathname, item)}
                 isCollapsed={collapsed}
                 moviesCount={moviesCount}
               />

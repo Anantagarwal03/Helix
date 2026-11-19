@@ -34,6 +34,9 @@ const SectionLabel = ({ children }) => (
 export default function FilmDetail() {
   const { id } = useParams()
   const [film, setFilm] = useState(null)
+  const [watchData, setWatchData] = useState(null)
+  const [watchLoading, setWatchLoading] = useState(false)
+  const [region, setRegion] = useState('IN')
   const containerRef = useRef(null)
 
   const { scrollYProgress } = useScroll({ container: containerRef })
@@ -73,17 +76,33 @@ export default function FilmDetail() {
         reception: targetFilm.reception || `${targetFilm.complexity || 'High'} Tier Evaluation Matrix`,
         soundtrack: targetFilm.soundtrack || 'Thematic Orchestration Ambient Waves',
         tracklist: targetFilm.tracklist || ['Main Title Narrative Theme'],
-        whereToWatch: targetFilm.whereToWatch || 'Secure Archive Stream Hub',
       })
     }
   }, [id])
+
+  useEffect(() => {
+    const targetFilm = MOVIES.find(m => m.id === id)
+    if (!targetFilm) return
+    const controller = new AbortController()
+    setWatchLoading(true)
+    fetch(`/api/movie-watch-providers?title=${encodeURIComponent(targetFilm.title)}&year=${targetFilm.year}&region=${region}`, { signal: controller.signal })
+      .then(async response => {
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Availability is unavailable.')
+        return data
+      })
+      .then(setWatchData)
+      .catch(error => { if (error.name !== 'AbortError') setWatchData({ region, providers: [], link: null }) })
+      .finally(() => { if (!controller.signal.aborted) setWatchLoading(false) })
+    return () => controller.abort()
+  }, [id, region])
 
   if (!film) {
     return (
       <div className="w-full min-h-screen overflow-y-auto block relative p-8 text-white flex flex-col items-center justify-center">
         <h1 className="text-3xl font-bold mb-4">Film not found</h1>
-        <Link to="/" className="text-[#00f2fe] hover:text-[#8b5cf6] transition-colors">
-          ← Return to The Labyrinth
+        <Link to="/library" className="text-[#00f2fe] hover:text-[#8b5cf6] transition-colors">
+          ← Back to Library
         </Link>
       </div>
     )
@@ -102,7 +121,7 @@ export default function FilmDetail() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <Link
-          to="/"
+          to="/library"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm transition-all duration-300"
           style={{
             background: 'rgba(255,255,255,0.05)',
@@ -123,7 +142,7 @@ export default function FilmDetail() {
             e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
           }}
         >
-          <span>←</span> Return to The Labyrinth
+          <span>←</span> Back to Library
         </Link>
       </motion.nav>
 
@@ -197,7 +216,7 @@ export default function FilmDetail() {
               {film.title}
             </h1>
             <Link
-              to={`/?node=${film.id}-film`}
+              to={`/graph?film=${film.id}`}
               className="inline-block px-4 py-2 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 transition-all text-sm w-max"
               style={{ backdropFilter: 'blur(8px)' }}
             >
@@ -338,18 +357,28 @@ export default function FilmDetail() {
 
           {/* Where to Watch */}
           <SectionReveal delay={0.1}>
-            <SectionLabel>Where to Watch</SectionLabel>
-            <div
-              className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold tracking-wide"
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#fff',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-              }}
-            >
-              {film.whereToWatch}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <SectionLabel>Where to Watch</SectionLabel>
+              <label className="text-xs text-slate-400 flex items-center gap-2">Region
+                <select value={region} onChange={event => setRegion(event.target.value)} className="rounded-md bg-slate-900 border border-white/15 px-2 py-1 text-white">
+                  <option value="IN">India</option><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option><option value="AU">Australia</option>
+                </select>
+              </label>
             </div>
+            {watchLoading ? <p className="text-sm text-slate-400">Checking availability…</p> : watchData?.providers?.length ? (
+              <div className="flex flex-wrap gap-2">
+                {watchData.providers.map(provider => <a key={`${provider.provider_id}-${provider.availability}`} href={watchData.link || `https://www.justwatch.com/${region.toLowerCase()}/search?q=${encodeURIComponent(film.title)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white bg-white/5 border border-white/10 hover:bg-white/10">
+                  {provider.logo_path && <img src={`https://image.tmdb.org/t/p/w45${provider.logo_path}`} alt="" className="w-5 h-5 object-contain" />}
+                  {provider.provider_name} <span className="text-xs text-slate-400">{provider.availability}</span>
+                </a>)}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-slate-400">No availability data was returned for this region.</p>
+                <a href={`https://www.justwatch.com/${region.toLowerCase()}/search?q=${encodeURIComponent(film.title)}`} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#00f2fe] underline">Search JustWatch for {film.title}</a>
+              </div>
+            )}
+            <p className="mt-2 text-[10px] text-slate-600">Availability can change. Data provided by TMDB and JustWatch.</p>
           </SectionReveal>
 
         </div>

@@ -1,5 +1,6 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { playClickSound } from '../utils/audio';
 
 import sixthSenseImg from '../assets/posters/sixth-sense.jpg';
@@ -28,11 +29,11 @@ const FILTER_COLORS = {
 };
 
 const libraryData = [
-  { id: '1', title: 'The Sixth Sense', year: '1999', director: 'M. Night Shyamalan', rating: '9.8', genre: ['Psychological Thriller', 'Supernatural'], twistTag: 'Identity Reveal', nodes: 12, events: 23, image: sixthSenseImg, color: '#ef4444' },
-  { id: '2', title: 'Donnie Darko', year: '2001', director: 'Richard Kelly', rating: '9.4', genre: ['Sci-Fi', 'Psychological'], twistTag: 'Temporal Loop', nodes: 18, events: 31, image: donnieDarkoImg, color: C.cyan },
-  { id: '3', title: 'Zodiac', year: '2007', director: 'David Fincher', rating: '8.7', genre: ['Crime', 'Mystery'], twistTag: 'Unreliable Reality', nodes: 29, events: 54, image: zodiacImg, color: C.amber },
-  { id: '4', title: 'Taxi Driver', year: '1976', director: 'Martin Scorsese', rating: '8.5', genre: ['Crime', 'Drama'], twistTag: 'Psychological Descent', nodes: 21, events: 38, image: taxiDriverImg, color: C.violet },
-  { id: '5', title: 'Oldboy', year: '2003', director: 'Park Chan-wook', rating: '9.9', genre: ['Action', 'Drama'], twistTag: 'Revenge Trap', nodes: 24, events: 42, image: oldboyImg, color: C.magenta },
+  { id: '1', detailId: 'sixth-sense', title: 'The Sixth Sense', year: '1999', director: 'M. Night Shyamalan', genre: ['Psychological Thriller', 'Supernatural'], twistTag: 'Identity Reveal', nodes: 12, events: 23, image: sixthSenseImg, color: '#ef4444' },
+  { id: '2', detailId: 'donnie-darko', title: 'Donnie Darko', year: '2001', director: 'Richard Kelly', genre: ['Sci-Fi', 'Psychological'], twistTag: 'Temporal Loop', nodes: 18, events: 31, image: donnieDarkoImg, color: C.cyan },
+  { id: '3', detailId: 'zodiac', title: 'Zodiac', year: '2007', director: 'David Fincher', genre: ['Crime', 'Mystery'], twistTag: 'Unreliable Reality', nodes: 29, events: 54, image: zodiacImg, color: C.amber },
+  { id: '4', detailId: 'taxi-driver', title: 'Taxi Driver', year: '1976', director: 'Martin Scorsese', genre: ['Crime', 'Drama'], twistTag: 'Psychological Descent', nodes: 21, events: 38, image: taxiDriverImg, color: C.violet },
+  { id: '5', detailId: 'oldboy', title: 'Oldboy', year: '2003', director: 'Park Chan-wook', genre: ['Action', 'Drama'], twistTag: 'Revenge Trap', nodes: 24, events: 42, image: oldboyImg, color: C.magenta },
 ];
 
 const useTilt = (maxTilt = 9) => {
@@ -141,7 +142,7 @@ const MovieCard = ({ movie }) => {
 
       <div className="w-full aspect-[2/3] overflow-hidden relative border border-white/[0.06] rounded-lg bg-black/40">
         <img
-          src={movie.image}
+          src={movie.tmdb?.posterUrl || movie.image}
           alt={movie.title}
           className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500 sepia-[.12]"
         />
@@ -158,11 +159,11 @@ const MovieCard = ({ movie }) => {
           className="absolute top-2 right-2 z-30 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1"
           style={{ background: `${C.amber}14`, border: `1px solid ${C.amber}30`, color: C.amber }}
         >
-          ⚡ {movie.rating}
+          {movie.tmdb?.rating ? `TMDB ${movie.tmdb.rating.toFixed(1)}` : 'TMDB —'}
         </div>
 
         <div className="absolute bottom-2 left-2 z-30 flex flex-wrap gap-1 max-w-[90%]">
-          {movie.genre.map((g, i) => (
+          {(movie.tmdb?.genres?.length ? movie.tmdb.genres : movie.genre).map((g, i) => (
             <span key={i} className="text-[9px] backdrop-blur-sm px-1.5 py-0.5 rounded tracking-wide"
               style={{ background: 'rgba(0,0,0,0.55)', color: 'rgba(255,255,255,0.4)' }}>
               {g}
@@ -179,8 +180,10 @@ const MovieCard = ({ movie }) => {
           {movie.title}
         </h2>
         <span className="text-[10px] font-mono tracking-wide mt-1 leading-none" style={{ color: 'rgba(255,255,255,0.28)' }}>
-          {movie.year} · {movie.director}
+          {movie.year} · {movie.tmdb?.director || movie.director}
         </span>
+        {movie.tmdb && <span className="text-[9px] text-slate-500 mt-1">{movie.tmdb.voteCount.toLocaleString()} TMDB votes · <a href={movie.tmdb.sourceUrl} target="_blank" rel="noreferrer" className="underline">source</a></span>}
+        {movie.tmdb?.overview && <p className="text-[10px] text-slate-500 leading-relaxed mt-2 line-clamp-3">{movie.tmdb.overview}</p>}
 
         <div className="mt-3">
           <span
@@ -202,12 +205,13 @@ const MovieCard = ({ movie }) => {
               <span className="ml-1 uppercase text-[9px] tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>Events</span>
             </span>
           </div>
-          <button
+          {movie.detailId ? <Link
+            to={`/film/${movie.detailId}`}
             className="text-[10px] font-mono font-bold tracking-wider uppercase transition-all duration-200 group-hover:translate-x-0.5"
             style={{ color: movie.color }}
           >
             Explore →
-          </button>
+          </Link> : <span className="text-[9px] font-mono uppercase text-slate-600" title="A Helix story map has not been created for this film yet">Story map pending</span>}
         </div>
       </div>
     </div>
@@ -217,10 +221,95 @@ const MovieCard = ({ movie }) => {
 export default function LibrarySection() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [movies, setMovies] = useState(libraryData);
+  const [tmdbData, setTmdbData] = useState({});
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+  const [showAddFilm, setShowAddFilm] = useState(false);
+  const [lookupQuery, setLookupQuery] = useState('');
+  const [lookupResults, setLookupResults] = useState([]);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+  const [selectedFilm, setSelectedFilm] = useState(null);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('helix-added-films') || '[]');
+      setMovies([...libraryData, ...saved]);
+      setTmdbData(JSON.parse(localStorage.getItem('helix-tmdb-metadata') || '{}'));
+    } catch {
+      setMovies(libraryData);
+    }
+  }, []);
+
+  const syncCurrentFilms = async () => {
+    setSyncing(true);
+    setSyncMessage('Fetching current film details from TMDB…');
+    const results = await Promise.allSettled(libraryData.map(async movie => {
+      const response = await fetch(`/api/movie-metadata?title=${encodeURIComponent(movie.title)}&year=${movie.year}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `Could not find ${movie.title}.`);
+      return [movie.id, data];
+    }));
+    const next = { ...tmdbData };
+    const failures = [];
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') next[result.value[0]] = result.value[1];
+      else failures.push(libraryData[index].title);
+    });
+    setTmdbData(next);
+    localStorage.setItem('helix-tmdb-metadata', JSON.stringify(next));
+    setSyncMessage(failures.length ? `Updated ${5 - failures.length} of 5. Could not match: ${failures.join(', ')}.` : 'All 5 films updated from TMDB.');
+    setSyncing(false);
+  };
+
+  const searchFilms = async (event) => {
+    event.preventDefault();
+    if (lookupQuery.trim().length < 2) return;
+    setLookupLoading(true);
+    setLookupError('');
+    setSelectedFilm(null);
+    try {
+      const response = await fetch(`/api/search-movies?query=${encodeURIComponent(lookupQuery.trim())}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Search failed.');
+      setLookupResults(data.results || []);
+      if (!data.results?.length) setLookupError('No matching movies found.');
+    } catch (error) {
+      setLookupError(error.message || 'Could not search right now.');
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
+  const addFilm = () => {
+    if (!selectedFilm) return;
+    const movie = {
+      id: `tmdb-${selectedFilm.providerId}`,
+      title: selectedFilm.title,
+      year: selectedFilm.year || 'Year unknown',
+      director: 'Details not indexed',
+      rating: '—',
+      genre: ['Imported'],
+      twistTag: 'Needs story map',
+      nodes: 0,
+      events: 0,
+      image: selectedFilm.posterUrl || '/favicon.svg',
+      color: C.cyan,
+      source: selectedFilm.source,
+    };
+    const saved = [...movies.filter(item => item.id.startsWith('tmdb-')), movie];
+    localStorage.setItem('helix-added-films', JSON.stringify(saved));
+    setMovies([...libraryData, ...saved]);
+    setShowAddFilm(false);
+    setSelectedFilm(null);
+    setLookupQuery('');
+    setLookupResults([]);
+  };
 
   const filteredMovies = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    return libraryData.filter(m => {
+    return movies.map(movie => ({ ...movie, tmdb: tmdbData[movie.id] })).filter(m => {
       const matchesFilter = activeFilter === 'All' || m.twistTag === activeFilter;
       const matchesSearch = !q || (
         m.title.toLowerCase().includes(q) ||
@@ -230,7 +319,7 @@ export default function LibrarySection() {
       );
       return matchesFilter && matchesSearch;
     });
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, searchQuery, movies, tmdbData]);
 
   const activeColor = FILTER_COLORS[activeFilter] || C.cyan;
 
@@ -248,24 +337,29 @@ export default function LibrarySection() {
             </h1>
             <div className="flex items-center gap-3 mt-2">
               <span className="text-[10px] font-mono tabular-nums" style={{ color: C.cyan }}>
-                {libraryData.length} volumes
+                {movies.length} volumes
               </span>
               <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>·</span>
               <span className="text-[10px] font-mono tabular-nums" style={{ color: C.violet }}>
-                {libraryData.reduce((a, m) => a + m.nodes, 0)} nodes
+                {movies.reduce((a, m) => a + m.nodes, 0)} nodes
               </span>
               <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>·</span>
               <span className="text-[10px] font-mono tabular-nums" style={{ color: C.magenta }}>
-                {libraryData.reduce((a, m) => a + m.events, 0)} events
+                {movies.reduce((a, m) => a + m.events, 0)} events
               </span>
             </div>
           </div>
+          <div className="flex flex-col gap-3 w-full max-w-lg">
+          <button type="button" onClick={syncCurrentFilms} disabled={syncing} className="self-end px-3 py-2 rounded-md font-mono text-[10px] uppercase tracking-wider disabled:opacity-50" style={{ color: C.cyan, border: `1px solid ${C.cyan}50`, background: `${C.cyan}0c` }}>{syncing ? 'Syncing current films…' : 'Sync ratings & details'}</button>
+          {syncMessage && <p className="text-[10px] font-mono text-slate-400 text-right">{syncMessage}</p>}
+          <button type="button" onClick={() => setShowAddFilm(true)} className="self-end px-3 py-2 rounded-md font-mono text-[10px] uppercase tracking-wider" style={{ color: C.cyan, border: `1px solid ${C.cyan}50`, background: `${C.cyan}0c` }}>+ Add Film</button>
           <TerminalSearch
             value={searchQuery}
             onChange={setSearchQuery}
             resultCount={filteredMovies.length}
-            total={libraryData.length}
+            total={movies.length}
           />
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -330,6 +424,33 @@ export default function LibrarySection() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <p className="mt-8 text-[10px] text-slate-600 text-center">
+        This product uses the <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer" className="underline">TMDB API</a> but is not endorsed or certified by TMDB.
+      </p>
+
+      {showAddFilm && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-labelledby="add-film-title">
+          <div className="w-full max-w-xl rounded-xl p-5 max-h-[85vh] overflow-y-auto" style={{ background: '#0b0820', border: '1px solid rgba(0,242,254,.24)' }}>
+            <div className="flex justify-between items-center mb-4">
+              <div><h2 id="add-film-title" className="text-white font-bold">Add a film</h2><p className="text-xs text-slate-400 mt-1">Search TMDB, review the match, then add it to this browser’s library.</p></div>
+              <button onClick={() => setShowAddFilm(false)} className="text-slate-400 px-2" aria-label="Close">✕</button>
+            </div>
+            <form onSubmit={searchFilms} className="flex gap-2">
+              <input value={lookupQuery} onChange={e => setLookupQuery(e.target.value)} placeholder="Movie title and year" className="flex-1 rounded-md px-3 py-2 text-sm text-white bg-black/40 border border-white/10 outline-none" />
+              <button disabled={lookupLoading} className="rounded-md px-4 text-sm font-semibold" style={{ background: `${C.cyan}20`, color: C.cyan }}>{lookupLoading ? 'Searching…' : 'Search'}</button>
+            </form>
+            {lookupError && <p className="text-sm text-rose-300 mt-3">{lookupError}</p>}
+            <div className="mt-4 space-y-2">
+              {lookupResults.map(film => <button key={film.providerId} type="button" onClick={() => setSelectedFilm(film)} className="w-full flex gap-3 text-left p-2 rounded-lg" style={{ background: selectedFilm?.providerId === film.providerId ? `${C.cyan}18` : 'rgba(255,255,255,.03)', border: `1px solid ${selectedFilm?.providerId === film.providerId ? `${C.cyan}60` : 'rgba(255,255,255,.07)'}` }}>
+                {film.posterUrl ? <img src={film.posterUrl} alt="" className="w-12 h-[72px] object-cover rounded" /> : <div className="w-12 h-[72px] bg-white/5 rounded" />}
+                <span className="min-w-0"><strong className="block text-sm text-white">{film.title} <span className="text-slate-400">{film.year}</span></strong><span className="line-clamp-3 text-xs text-slate-400 mt-1">{film.overview || 'No synopsis available.'}</span><span className="text-[10px] text-slate-500 mt-1 block">Poster and metadata: TMDB</span></span>
+              </button>)}
+            </div>
+            {selectedFilm && <button type="button" onClick={addFilm} className="mt-4 w-full rounded-md py-2 text-sm font-bold" style={{ background: C.cyan, color: '#030014' }}>Add {selectedFilm.title}</button>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

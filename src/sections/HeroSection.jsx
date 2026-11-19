@@ -114,7 +114,7 @@ const HeroSection = () => {
 
       <div className="relative z-50 flex flex-col items-center mt-[10vh]">
         <GlitchText />
-        <Link to="/graph" className="group relative px-12 py-5 rounded-xl bg-black/60 backdrop-blur-md border border-white/30 text-white font-bold tracking-[0.2em] uppercase hover:bg-white/10 hover:border-[#00f2fe]/50 transition-all duration-500 overflow-hidden shadow-[0_0_30px_rgba(0,242,254,0.1)]">
+        <Link to="/overview" className="group relative px-12 py-5 rounded-xl bg-black/60 backdrop-blur-md border border-white/30 text-white font-bold tracking-[0.2em] uppercase hover:bg-white/10 hover:border-[#00f2fe]/50 transition-all duration-500 overflow-hidden shadow-[0_0_30px_rgba(0,242,254,0.1)]">
           <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#00f2fe]/0 via-[#00f2fe]/20 to-[#4facfe]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
           <span className="relative z-10">Enter Labyrinth</span>
         </Link>
