@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { playClickSound } from '../utils/audio';
 
 import sixthSenseImg from '../assets/posters/sixth-sense.jpg';
@@ -205,8 +205,8 @@ const MovieCard = ({ movie }) => {
               <span className="ml-1 uppercase text-[9px] tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>Events</span>
             </span>
           </div>
-          {movie.detailId ? <Link
-            to={`/film/${movie.detailId}`}
+          {movie.detailId || movie.graphId ? <Link
+            to={movie.graphId ? `/graph?film=${encodeURIComponent(movie.graphId)}` : `/film/${movie.detailId}`}
             className="text-[10px] font-mono font-bold tracking-wider uppercase transition-all duration-200 group-hover:translate-x-0.5"
             style={{ color: movie.color }}
           >
@@ -219,6 +219,7 @@ const MovieCard = ({ movie }) => {
 };
 
 export default function LibrarySection() {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [movies, setMovies] = useState(libraryData);
@@ -231,6 +232,8 @@ export default function LibrarySection() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState('');
   const [selectedFilm, setSelectedFilm] = useState(null);
+  const [storyDraft, setStoryDraft] = useState(null);
+  const [storyGenerating, setStoryGenerating] = useState(false);
 
   useEffect(() => {
     try {
@@ -269,9 +272,11 @@ export default function LibrarySection() {
     setLookupLoading(true);
     setLookupError('');
     setSelectedFilm(null);
+    setStoryDraft(null);
     try {
       const response = await fetch(`/api/search-movies?query=${encodeURIComponent(lookupQuery.trim())}`);
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
+      if (!data) throw new Error('The movie search server returned an empty response. Make sure the Helix API server is running, then try again.');
       if (!response.ok) throw new Error(data.error || 'Search failed.');
       setLookupResults(data.results || []);
       if (!data.results?.length) setLookupError('No matching movies found.');
@@ -282,29 +287,66 @@ export default function LibrarySection() {
     }
   };
 
-  const addFilm = () => {
+  const generateStoryMap = async () => {
     if (!selectedFilm) return;
+    setStoryGenerating(true);
+    setLookupError('');
+    setStoryDraft(null);
+    try {
+      const response = await fetch('/api/generate-story-map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId: selectedFilm.providerId }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!data) throw new Error('The story-map server returned an empty response. Make sure the Helix API server is running, then try again.');
+      if (!response.ok) throw new Error(data.error || 'Could not generate a story map.');
+      setStoryDraft(data);
+    } catch (error) {
+      setLookupError(error.message || 'Could not generate a story map right now.');
+    } finally {
+      setStoryGenerating(false);
+    }
+  };
+
+  const addFilm = () => {
+    if (!storyDraft?.movie || !storyDraft?.storyGraph) return;
+    const { movie: details, storyGraph } = storyDraft;
+    const graphId = storyGraph.id;
+    const alreadyAdded = movies.some(item => item.id === graphId)
+      || libraryData.some(item => item.title.toLowerCase() === details.title.toLowerCase() && String(item.year) === String(details.year));
+    if (alreadyAdded) {
+      setLookupError(`${details.title} (${details.year}) is already in the library.`);
+      return;
+    }
+    const palette = [C.cyan, C.violet, C.magenta, C.amber, C.emerald];
+    const accentColor = palette[movies.length % palette.length];
     const movie = {
-      id: `tmdb-${selectedFilm.providerId}`,
-      title: selectedFilm.title,
-      year: selectedFilm.year || 'Year unknown',
-      director: 'Details not indexed',
-      rating: '—',
-      genre: ['Imported'],
-      twistTag: 'Needs story map',
-      nodes: 0,
-      events: 0,
-      image: selectedFilm.posterUrl || '/favicon.svg',
-      color: C.cyan,
-      source: selectedFilm.source,
+      id: graphId,
+      graphId,
+      title: details.title,
+      year: details.year || 'Year unknown',
+      director: details.director || 'Unknown director',
+      rating: details.rating || '—',
+      genre: details.genres?.length ? details.genres : ['Imported'],
+      twistTag: storyGraph.twistType || 'Story map',
+      nodes: storyGraph.nodes.filter(node => node.type !== 'film').length,
+      events: storyGraph.nodes.filter(node => node.type === 'event').length,
+      image: details.posterUrl || '/favicon.svg',
+      color: accentColor,
+      tmdb: details,
+      storyGraph,
     };
-    const saved = [...movies.filter(item => item.id.startsWith('tmdb-')), movie];
+    const saved = [...movies.filter(item => item.id.startsWith('tmdb-') && item.id !== graphId), movie];
     localStorage.setItem('helix-added-films', JSON.stringify(saved));
     setMovies([...libraryData, ...saved]);
     setShowAddFilm(false);
     setSelectedFilm(null);
+    setStoryDraft(null);
     setLookupQuery('');
     setLookupResults([]);
+    setLookupError('');
+    navigate(`/graph?film=${encodeURIComponent(graphId)}`);
   };
 
   const filteredMovies = useMemo(() => {
@@ -433,21 +475,49 @@ export default function LibrarySection() {
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-labelledby="add-film-title">
           <div className="w-full max-w-xl rounded-xl p-5 max-h-[85vh] overflow-y-auto" style={{ background: '#0b0820', border: '1px solid rgba(0,242,254,.24)' }}>
             <div className="flex justify-between items-center mb-4">
-              <div><h2 id="add-film-title" className="text-white font-bold">Add a film</h2><p className="text-xs text-slate-400 mt-1">Search TMDB, review the match, then add it to this browser’s library.</p></div>
-              <button onClick={() => setShowAddFilm(false)} className="text-slate-400 px-2" aria-label="Close">✕</button>
+              <div><h2 id="add-film-title" className="text-white font-bold">{storyDraft ? 'Review story map' : 'Add a film'}</h2><p className="text-xs text-slate-400 mt-1">{storyDraft ? 'Check the generated beats, spoiler levels, connections, and sources before saving.' : 'Find the correct TMDB match, then generate a sourced story-map draft.'}</p></div>
+              <button onClick={() => { setShowAddFilm(false); setStoryDraft(null); setLookupError(''); }} className="text-slate-400 px-2" aria-label="Close">✕</button>
             </div>
-            <form onSubmit={searchFilms} className="flex gap-2">
-              <input value={lookupQuery} onChange={e => setLookupQuery(e.target.value)} placeholder="Movie title and year" className="flex-1 rounded-md px-3 py-2 text-sm text-white bg-black/40 border border-white/10 outline-none" />
-              <button disabled={lookupLoading} className="rounded-md px-4 text-sm font-semibold" style={{ background: `${C.cyan}20`, color: C.cyan }}>{lookupLoading ? 'Searching…' : 'Search'}</button>
-            </form>
+            {!storyDraft && <>
+              <form onSubmit={searchFilms} className="flex gap-2">
+                <input value={lookupQuery} onChange={e => setLookupQuery(e.target.value)} placeholder="Movie title and year" className="flex-1 rounded-md px-3 py-2 text-sm text-white bg-black/40 border border-white/10 outline-none" />
+                <button disabled={lookupLoading || storyGenerating} className="rounded-md px-4 text-sm font-semibold disabled:opacity-50" style={{ background: `${C.cyan}20`, color: C.cyan }}>{lookupLoading ? 'Searching…' : 'Search'}</button>
+              </form>
+              <div className="mt-4 space-y-2">
+                {lookupResults.map(film => <button key={film.providerId} type="button" onClick={() => { setSelectedFilm(film); setLookupError(''); }} className="w-full flex gap-3 text-left p-2 rounded-lg" style={{ background: selectedFilm?.providerId === film.providerId ? `${C.cyan}18` : 'rgba(255,255,255,.03)', border: `1px solid ${selectedFilm?.providerId === film.providerId ? `${C.cyan}60` : 'rgba(255,255,255,.07)'}` }}>
+                  {film.posterUrl ? <img src={film.posterUrl} alt="" className="w-12 h-[72px] object-cover rounded" /> : <div className="w-12 h-[72px] bg-white/5 rounded" />}
+                  <span className="min-w-0"><strong className="block text-sm text-white">{film.title} <span className="text-slate-400">{film.year}</span></strong><span className="line-clamp-3 text-xs text-slate-400 mt-1">{film.overview || 'No synopsis available.'}</span><span className="text-[10px] text-slate-500 mt-1 block">Poster and metadata: TMDB</span></span>
+                </button>)}
+              </div>
+            </>}
             {lookupError && <p className="text-sm text-rose-300 mt-3">{lookupError}</p>}
-            <div className="mt-4 space-y-2">
-              {lookupResults.map(film => <button key={film.providerId} type="button" onClick={() => setSelectedFilm(film)} className="w-full flex gap-3 text-left p-2 rounded-lg" style={{ background: selectedFilm?.providerId === film.providerId ? `${C.cyan}18` : 'rgba(255,255,255,.03)', border: `1px solid ${selectedFilm?.providerId === film.providerId ? `${C.cyan}60` : 'rgba(255,255,255,.07)'}` }}>
-                {film.posterUrl ? <img src={film.posterUrl} alt="" className="w-12 h-[72px] object-cover rounded" /> : <div className="w-12 h-[72px] bg-white/5 rounded" />}
-                <span className="min-w-0"><strong className="block text-sm text-white">{film.title} <span className="text-slate-400">{film.year}</span></strong><span className="line-clamp-3 text-xs text-slate-400 mt-1">{film.overview || 'No synopsis available.'}</span><span className="text-[10px] text-slate-500 mt-1 block">Poster and metadata: TMDB</span></span>
-              </button>)}
-            </div>
-            {selectedFilm && <button type="button" onClick={addFilm} className="mt-4 w-full rounded-md py-2 text-sm font-bold" style={{ background: C.cyan, color: '#030014' }}>Add {selectedFilm.title}</button>}
+            {storyDraft && <div className="mt-4 space-y-4">
+              <div className="flex items-start gap-3 rounded-lg p-3 bg-white/[0.03] border border-white/10">
+                {storyDraft.movie.posterUrl && <img src={storyDraft.movie.posterUrl} alt="" className="w-12 h-[72px] object-cover rounded" />}
+                <div className="min-w-0"><h3 className="text-sm font-semibold text-white">{storyDraft.movie.title} ({storyDraft.movie.year})</h3><p className="text-xs text-slate-400 mt-1">{storyDraft.storyGraph.summary}</p><p className="text-[10px] font-mono text-cyan-300 mt-2">{storyDraft.storyGraph.nodes.length - 1} story beats · {storyDraft.storyGraph.links.length} connections · {storyDraft.storyGraph.twistType}</p></div>
+              </div>
+              <div className="max-h-64 overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/[0.06]">
+                {storyDraft.storyGraph.nodes.filter(node => node.type !== 'film').map(node => <div key={node.id} className="p-3">
+                  <div className="flex items-center justify-between gap-3"><strong className="text-xs text-white">{node.label}</strong><span className="text-[9px] font-mono uppercase tracking-wide text-slate-400">{node.type} · {['Spoiler-free', 'Some spoilers', 'Full story'][node.spoilerLevel]}</span></div>
+                  <p className="text-[11px] text-slate-400 mt-1">{node.revealSubtext}</p>
+                  <div className="flex flex-wrap gap-2 mt-2">{node.sources.map(source => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="text-[9px] text-cyan-300 underline">{source.label}</a>)}</div>
+                </div>)}
+              </div>
+              <div className="rounded-lg p-3 bg-black/20 border border-white/[0.06]">
+                <h4 className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-2">Connection explanations</h4>
+                <div className="space-y-2 max-h-36 overflow-y-auto">{storyDraft.storyGraph.links.filter(link => link.source !== storyDraft.storyGraph.id).map(link => {
+                  const sourceLabel = storyDraft.storyGraph.nodes.find(node => node.id === link.source)?.label || link.source;
+                  const targetLabel = storyDraft.storyGraph.nodes.find(node => node.id === link.target)?.label || link.target;
+                  return <p key={`${link.source}-${link.target}`} className="text-[10px] text-slate-400"><strong className="text-white">{sourceLabel} → {targetLabel}</strong><br /><span className="text-violet-300">{link.relationship}:</span> {link.explanation}</p>;
+                })}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => { setStoryDraft(null); generateStoryMap(); }} disabled={storyGenerating} className="rounded-md py-2 text-xs font-semibold border border-white/10 text-slate-300 disabled:opacity-50">Regenerate</button>
+                <button type="button" onClick={addFilm} className="rounded-md py-2 text-xs font-bold" style={{ background: C.cyan, color: '#030014' }}>Approve & add to library</button>
+              </div>
+              <p className="text-[9px] text-slate-500">AI-generated maps can contain mistakes. Review the source links and plot details before approval.</p>
+            </div>}
+            {!storyDraft && selectedFilm && <button type="button" onClick={generateStoryMap} disabled={storyGenerating} className="mt-4 w-full rounded-md py-2 text-sm font-bold disabled:opacity-60" style={{ background: C.cyan, color: '#030014' }}>{storyGenerating ? 'Researching and drafting…' : `Generate story-map draft for ${selectedFilm.title}`}</button>}
           </div>
         </div>
       )}

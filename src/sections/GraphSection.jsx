@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import DecryptedText from '../components/animations/DecryptedText';
-import TwistGraph3D, { INITIAL_GRAPH_DATA } from '../components/TwistGraph3D';
+import TwistGraph3D from '../components/TwistGraph3D';
 import { MOVIES } from '../data/movies';
+import { STORY_GRAPHS } from '../data/storyGraphs';
 
 const SideRevealPanel = ({ node, onClose, spoilerLevel, selectedConnectionId }) => {
   const open = !!node;
@@ -218,17 +219,6 @@ const StoryTimeline = ({ nodes, selectedNodeId, onSelect }) => (
   </div>
 );
 
-const SPOILER_LEVELS = {
-  'sixth-sense': 0, 'ss-malcolm': 0, 'ss-cole': 0, 'ss-anna': 0,
-  'ss-vincent': 1, 'ss-confession': 1, 'ss-kyra': 1, 'ss-shooting': 2, 'ss-ring': 2, 'ss-twist': 2,
-  'donnie-darko': 0, 'dd-donnie': 0, 'dd-gretchen': 0,
-  'dd-countdown': 1, 'dd-engine': 1, 'dd-flooding': 1, 'dd-book': 1,
-  'dd-frank': 2, 'dd-gretchen-death': 2, 'dd-frank-shot': 2, 'dd-twist': 2,
-  zodiac: 0, 'z-robert': 0, 'z-attacks': 1, 'z-cipher': 1, 'z-avery': 1, 'z-cipher-solved': 1, 'z-allen': 1, 'z-case-stalls': 2, 'z-twist': 2,
-  'taxi-driver': 0, 'td-travis': 0, 'td-night-shifts': 0, 'td-betsy': 0, 'td-diner': 1, 'td-iris': 1, 'td-weapons': 1, 'td-palantine': 2, 'td-shootout': 2, 'td-twist': 2,
-  oldboy: 0, 'ob-captivity': 0, 'ob-daesu': 0, 'ob-release': 0, 'ob-miha': 1, 'ob-hunt': 1, 'ob-woojin': 2, 'ob-ultimatum': 2, 'ob-twist': 2,
-};
-
 const SPOILER_FREE_COPY = {
   'sixth-sense': { revealText: 'Story map: The Sixth Sense', revealSubtext: 'Explore its characters and story connections.' },
   'ss-malcolm': { revealText: 'A child psychologist working with Cole', revealSubtext: 'Malcolm is trying to help Cole while rebuilding his relationship with his wife.' },
@@ -259,24 +249,50 @@ const GraphSection = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const routeFilmId = searchParams.get('film');
   const [selectedFilmId, setSelectedFilmId] = useState(() => MOVIES.some(movie => movie.id === routeFilmId) ? routeFilmId : MOVIES[0].id);
+  const [savedFilmRecords, setSavedFilmRecords] = useState([]);
   const [visibleTypes, setVisibleTypes] = useState(['character', 'event', 'twist']);
   const [spoilerLevel, setSpoilerLevel] = useState(0);
   const [viewMode, setViewMode] = useState('map');
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedConnectionId, setSelectedConnectionId] = useState(null);
   const graphRef = useRef(null);
-  const selectedFilm = MOVIES.find(movie => movie.id === selectedFilmId) || MOVIES[0];
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('helix-added-films') || '[]');
+      setSavedFilmRecords(Array.isArray(saved) ? saved.filter(movie => movie.storyGraph?.nodes && movie.storyGraph?.links) : []);
+    } catch {
+      setSavedFilmRecords([]);
+    }
+  }, []);
+  const graphMovies = useMemo(() => [
+    ...MOVIES,
+    ...savedFilmRecords.map(movie => ({
+      id: movie.graphId || movie.id,
+      title: movie.title,
+      year: movie.year,
+      director: movie.director,
+      accentColor: movie.color || '#00f2fe',
+    })),
+  ], [savedFilmRecords]);
+  const customStoryGraphs = useMemo(() => Object.fromEntries(savedFilmRecords.map(movie => [movie.graphId || movie.id, movie.storyGraph])), [savedFilmRecords]);
+  const allStoryGraphs = useMemo(() => ({ ...STORY_GRAPHS, ...customStoryGraphs }), [customStoryGraphs]);
+  useEffect(() => {
+    if (routeFilmId && graphMovies.some(movie => movie.id === routeFilmId)) setSelectedFilmId(routeFilmId);
+    else if (!graphMovies.some(movie => movie.id === selectedFilmId)) setSelectedFilmId(MOVIES[0].id);
+  }, [routeFilmId, graphMovies, selectedFilmId]);
+  const selectedFilm = graphMovies.find(movie => movie.id === selectedFilmId) || MOVIES[0];
 
   const graphData = useMemo(() => {
-    const filmLinks = INITIAL_GRAPH_DATA.links.filter(link => link.film === selectedFilm.id);
-    const filmNodeIds = new Set([selectedFilm.id]);
-    filmLinks.forEach(link => {
-      filmNodeIds.add(typeof link.source === 'object' ? link.source.id : link.source);
-      filmNodeIds.add(typeof link.target === 'object' ? link.target.id : link.target);
+    const selectedStory = allStoryGraphs[selectedFilm.id] || { nodes: [], links: [] };
+    const storyNodesById = new Map(selectedStory.nodes.map(node => [node.id, node]));
+    const filmLinks = selectedStory.links.filter(link => {
+      const source = typeof link.source === 'object' ? link.source.id : link.source;
+      const target = typeof link.target === 'object' ? link.target.id : link.target;
+      const impliedLevel = Math.max(storyNodesById.get(source)?.spoilerLevel ?? 0, storyNodesById.get(target)?.spoilerLevel ?? 0);
+      return (link.spoilerLevel ?? impliedLevel) <= spoilerLevel;
     });
-    const availableNodes = INITIAL_GRAPH_DATA.nodes.filter(node => filmNodeIds.has(node.id)
-      && (SPOILER_LEVELS[node.id] ?? 2) <= spoilerLevel);
-    const filmStoryNodes = INITIAL_GRAPH_DATA.nodes.filter(node => filmNodeIds.has(node.id) && node.type !== 'film');
+    const availableNodes = selectedStory.nodes.filter(node => (node.spoilerLevel ?? 2) <= spoilerLevel);
+    const filmStoryNodes = selectedStory.nodes.filter(node => node.type !== 'film');
     const storyOrder = new Map(filmStoryNodes.map((node, index) => [node.id, node.timelineOrder || index + 1]));
     const sameBeatOffset = new Map();
     ['character', 'event', 'twist'].forEach(type => {
@@ -309,7 +325,7 @@ const GraphSection = () => {
         return {
           ...node,
           ...(spoilerLevel === 0 ? SPOILER_FREE_COPY[node.id] : {}),
-          spoilerLevel: SPOILER_LEVELS[node.id] ?? 2,
+          spoilerLevel: node.spoilerLevel ?? 2,
           isContext: node.type !== 'film' && !focusIds.has(node.id),
           film: selectedFilm.id,
           filmName: selectedFilm.title,
@@ -346,7 +362,7 @@ const GraphSection = () => {
       }),
     }));
     return { nodes, links };
-  }, [selectedFilm, visibleTypes, spoilerLevel]);
+  }, [selectedFilm, visibleTypes, spoilerLevel, allStoryGraphs]);
 
   const graphNodesById = useMemo(() => new Map(graphData.nodes.map(node => [node.id, node])), [graphData]);
   const selectableNodes = graphData.nodes.filter(node => node.type !== 'film').sort((a, b) => (a.timelineOrder || 99) - (b.timelineOrder || 99));
@@ -407,7 +423,7 @@ const GraphSection = () => {
         <label className="flex flex-col gap-1 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
           Film
           <select value={selectedFilmId} onChange={event => { setSelectedFilmId(event.target.value); setSearchParams({ film: event.target.value }); setSelectedNode(null); setSelectedConnectionId(null); }} className="min-w-56 rounded-lg px-3 py-2 text-sm normal-case tracking-normal text-white bg-black/50 border border-white/10 focus:outline-none focus:border-cyan-400/50">
-            {MOVIES.map(movie => <option key={movie.id} value={movie.id}>{movie.title} ({movie.year})</option>)}
+            {graphMovies.map(movie => <option key={movie.id} value={movie.id}>{movie.title} ({movie.year})</option>)}
           </select>
         </label>
       </div>
