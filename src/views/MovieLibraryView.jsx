@@ -54,7 +54,7 @@ const MovieCard = ({ movie }) => {
     >
       {/* Poster */}
       <div className="relative overflow-hidden" style={{ aspectRatio: '2/3' }}>
-        {!imgError ? (
+        {!imgError && movie.poster ? (
           <img
             src={movie.poster}
             alt={`${movie.title} poster`}

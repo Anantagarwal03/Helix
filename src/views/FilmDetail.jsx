@@ -186,11 +186,7 @@ export default function FilmDetail() {
               src={film?.poster || film?.posterUrl}
               alt={film?.title || 'Film Poster'}
               className="absolute inset-0 w-full h-full object-cover z-10"
-              onError={e => {
-                const currentId = window.location.pathname.split('/').pop()
-                const backupData = MOVIES.find(m => m.id === currentId)
-                if (backupData) e.target.src = backupData.poster
-              }}
+              onError={e => { e.currentTarget.style.display = 'none'; }}
             />
             {/* Poster edge vignette */}
             <div className="absolute inset-0 z-20 pointer-events-none"
@@ -211,12 +207,12 @@ export default function FilmDetail() {
         <div className="relative flex-1 text-slate-200 flex flex-col justify-center">
 
           {/* Parallax ambient background */}
-          <motion.img
+          {(film.posterUrl || film.poster) && <motion.img
             src={film.posterUrl || film.poster}
             alt="ambient background"
             className="absolute inset-0 -z-10 blur-[100px] scale-110 pointer-events-none object-cover w-full h-full"
             style={{ y: ambientY, opacity: ambientOpacity }}
-          />
+          />}
 
           {/* Title block */}
           <motion.div

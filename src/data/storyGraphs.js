@@ -1,4 +1,5 @@
 // Curated story maps. Movie metadata comes from MOVIES/TMDB; story beats are authored here.
+import { EXPANDED_STORY_GRAPHS } from './expandedStoryGraphs.js';
 export const STORY_GRAPHS = {
   'sixth-sense': {
     nodes: [
@@ -154,6 +155,7 @@ export const STORY_GRAPHS = {
       { source: 'ob-woojin', target: 'ob-twist', film: 'oldboy', relationship: 'reveals', explanation: 'Woo-jin explains how he engineered the reunion and used the hidden family connection as revenge.' },
     ],
   },
+  ...EXPANDED_STORY_GRAPHS,
 }
 
 export const INTER_FILM_LINKS = [

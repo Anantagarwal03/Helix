@@ -193,8 +193,9 @@ app.post('/api/generate-story-map', requireAuth, async (req, res) => {
   }
 
   const groqApiKey = getProjectEnvValue('GROQ_API_KEY');
-  if (!groqApiKey) {
-    return res.status(503).json({ error: 'Story-map drafting is not configured. Add GROQ_API_KEY to the project .env file.' });
+  const geminiApiKey = getProjectEnvValue('GEMINI_API_KEY');
+  if (!groqApiKey && !geminiApiKey) {
+    return res.status(503).json({ error: 'Story-map drafting is not configured. Add GEMINI_API_KEY or GROQ_API_KEY to the project .env file.' });
   }
   const tavilyApiKey = getProjectEnvValue('TAVILY_API_KEY');
   if (!tavilyApiKey) {
@@ -269,7 +270,6 @@ app.post('/api/generate-story-map', requireAuth, async (req, res) => {
       'Do not include markdown or text before or after the JSON object. If the supplied sources do not support a claim, leave it out.',
     ].join(' ');
 
-    activeProvider = 'Groq';
     const groqMessages = [
       { role: 'system', content: instructions },
       { role: 'user', content: JSON.stringify({
@@ -284,25 +284,85 @@ app.post('/api/generate-story-map', requireAuth, async (req, res) => {
           researchSources: researchSources.map((source, index) => ({ index, ...source })),
       }) },
     ];
-    const requestGroqDraft = (responseFormat, messages = groqMessages) => axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'openai/gpt-oss-120b',
-      messages,
-      response_format: responseFormat,
-      reasoning_effort: 'low',
-      max_completion_tokens: 6500,
-      temperature: 0.4,
-      stream: false,
+    const requestGroqDraft = (responseFormat, messages) => axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'openai/gpt-oss-120b', messages, response_format: responseFormat,
+      reasoning_effort: 'low', max_completion_tokens: 6500, temperature: 0.4, stream: false,
     }, {
       headers: { Authorization: `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
       timeout: 120000,
     });
 
-    const { draft, error: draftError } = await requestValidatedStoryDraft({
-      request: requestGroqDraft,
-      messages: groqMessages,
-      sourceCount: researchSources.length,
-      onSchemaFallback: () => console.warn('[story-map] Groq rejected strict JSON schema mode; retrying in JSON mode.'),
-    });
+    // Gemini supports the JSON Schema subset used here. Strip OpenAI-only
+    // additionalProperties flags before sending the schema to Google's API.
+    const toGeminiSchema = (schema) => {
+      if (Array.isArray(schema)) return schema.map(toGeminiSchema);
+      if (!schema || typeof schema !== 'object') return schema;
+      return Object.fromEntries(Object.entries(schema)
+        .filter(([key]) => key !== 'additionalProperties')
+        .map(([key, value]) => [key, toGeminiSchema(value)]));
+    };
+    const requestGeminiDraft = (_responseFormat, messages) => {
+      const systemInstruction = messages.find(message => message.role === 'system')?.content || '';
+      const contents = messages.filter(message => message.role !== 'system').map(message => ({
+        role: message.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: message.content }],
+      }));
+      return axios.post(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent`, {
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          ...(_responseFormat.type === 'json_schema'
+            ? { responseSchema: toGeminiSchema(STORY_MAP_SCHEMA) }
+            : {}),
+          maxOutputTokens: 8192,
+          temperature: 0.4,
+        },
+      }, {
+        headers: { 'x-goog-api-key': geminiApiKey, 'Content-Type': 'application/json' },
+        timeout: 120000,
+        transformResponse: [data => {
+          const parsed = JSON.parse(data);
+          const text = (parsed.candidates?.[0]?.content?.parts || []).map(part => part.text || '').join('');
+          return { choices: [{ message: { content: text } }] };
+        }],
+      });
+    };
+
+    let draftResult;
+    if (groqApiKey) {
+      activeProvider = 'Groq';
+      try {
+        draftResult = await requestValidatedStoryDraft({
+          request: requestGroqDraft,
+          messages: [...groqMessages],
+          sourceCount: researchSources.length,
+          onSchemaFallback: () => console.warn('[story-map] Groq rejected strict JSON schema mode; retrying in JSON mode.'),
+        });
+      } catch (groqError) {
+        if (!geminiApiKey) throw groqError;
+        console.warn('[story-map] Groq request failed; switching to Gemini fallback.', {
+          status: groqError.response?.status || null,
+          code: groqError.code || null,
+        });
+        draftResult = null;
+      }
+      if (draftResult?.error && geminiApiKey) {
+        console.warn('[story-map] Groq draft failed validation; retrying with Gemini fallback.');
+        draftResult = null;
+      }
+    }
+
+    if (!draftResult && geminiApiKey) {
+      activeProvider = 'Gemini';
+      draftResult = await requestValidatedStoryDraft({
+        request: requestGeminiDraft,
+        messages: [...groqMessages],
+        sourceCount: researchSources.length,
+      });
+    }
+    if (!draftResult) throw new Error('No story-drafting provider is available.');
+    const { draft, error: draftError } = draftResult;
     if (draftError) {
       return res.status(502).json({ error: `The story draft did not pass validation after automatic retries: ${draftError}` });
     }
@@ -423,6 +483,9 @@ app.post('/api/generate-story-map', requireAuth, async (req, res) => {
     if ((status === 401 || status === 403) && activeProvider === 'Groq') {
       return res.status(502).json({ error: 'Groq rejected the API key or model settings. Check GROQ_API_KEY.' });
     }
+    if ((status === 401 || status === 403) && activeProvider === 'Gemini') {
+      return res.status(502).json({ error: 'Google rejected the Gemini API key. Check GEMINI_API_KEY in the project .env file.' });
+    }
     if ((status === 401 || status === 403) && activeProvider === 'Tavily') {
       return res.status(502).json({ error: 'Tavily rejected the search key. Check TAVILY_API_KEY.' });
     }
@@ -430,10 +493,13 @@ app.post('/api/generate-story-map', requireAuth, async (req, res) => {
       return res.status(429).json({ error: 'Tavily’s free search quota or rate limit was reached. Wait for its reset or retry later.' });
     }
     if (status === 429 && activeProvider === 'Groq') {
-      return res.status(429).json({ error: 'Groq’s free model quota or rate limit was reached. Wait for the limit to reset, then try again.' });
+      return res.status(429).json({ error: 'Groq’s free quota was reached, and no Gemini fallback key is configured. Add GEMINI_API_KEY to the project .env file or wait for Groq’s limit to reset.' });
     }
-    if (status === 400 && activeProvider === 'Groq') {
-      return res.status(502).json({ error: `Groq rejected the story-map request after the automatic format fallback: ${providerMessage}` });
+    if (status === 429 && activeProvider === 'Gemini') {
+      return res.status(429).json({ error: 'Gemini’s free quota or rate limit was reached while drafting this map. Check your Google AI Studio limits or try again later.' });
+    }
+    if (status === 400 && ['Groq', 'Gemini'].includes(activeProvider)) {
+      return res.status(502).json({ error: `${activeProvider} rejected the story-map request: ${providerMessage}` });
     }
     if (status === 401 || status === 403) {
       return res.status(502).json({ error: 'The movie or research provider rejected the request. Check the API keys in .env.' });
@@ -442,7 +508,7 @@ app.post('/api/generate-story-map', requireAuth, async (req, res) => {
     if (error.code === 'ECONNABORTED') return res.status(504).json({ error: 'Story-map research took too long. Try again.' });
     if (activeProvider === 'TMDB' && status === 404) return res.status(404).json({ error: 'TMDB could not load that movie. Go back and choose the correct search result.' });
     if (activeProvider === 'Tavily') return res.status(502).json({ error: `Tavily search failed${status ? ` (HTTP ${status})` : ''}. Check Tavily service status or try again shortly.` });
-    if (activeProvider === 'Groq') return res.status(502).json({ error: `Groq could not draft the map${status ? ` (HTTP ${status})` : ''}. Check the Groq service or request limits, then try again.` });
+    if (['Groq', 'Gemini'].includes(activeProvider)) return res.status(502).json({ error: `${activeProvider} could not draft the map${status ? ` (HTTP ${status})` : ''}. Try again shortly.` });
     res.status(502).json({ error: `TMDB could not load movie details${status ? ` (HTTP ${status})` : ''}. Check its key or try another search result.` });
   }
 });

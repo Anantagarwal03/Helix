@@ -1,11 +1,11 @@
 # Helix
 
-Helix maps films as spoiler-aware story graphs. TMDB supplies movie metadata; Tavily finds plot sources and Groq drafts the graph for review before it is added to the library.
+Helix maps films as spoiler-aware story graphs. TMDB supplies movie metadata; Tavily finds plot sources and Groq drafts the graph for review before it is added to the library. Google Gemini can take over if Groq is unavailable or its draft fails validation.
 
 ## Local setup
 
 1. Use Node.js 25.7 or later (the server uses the built-in SQLite module), then install dependencies with `npm install` and `npm install --prefix server`.
-2. Copy `.env.example` to `.env`. Add your TMDB, Groq, and Tavily keys there. Keep `.env` local; it is ignored by Git.
+2. Copy `.env.example` to `.env`. Add your TMDB and Tavily keys, plus at least one AI key (`GEMINI_API_KEY` or `GROQ_API_KEY`). Keep `.env` local; it is ignored by Git.
 3. Start the frontend with `npm run dev`.
 4. In another terminal, start the API server with `npm run dev:server`.
 
@@ -17,7 +17,7 @@ Open `/register` to create the first account using a Gmail, Yahoo, Outlook, Hotm
 
 In Library, search for a title and choose the correct TMDB result. Generate the story-map draft, review its beats, spoiler levels, connections, and source links, then approve it to add it to the library. Draft generation is limited to five requests per hour per client IP.
 
-Story-map generation uses Groq’s GPT-OSS model for schema-checked JSON and Tavily for research. Provider quotas and model availability can change. The API stores accounts, sessions, and user-owned maps in `server/data/helix.sqlite` (or `HELIX_DB_PATH`). Back up that database with the API stopped. Existing `server/data/library.json` records are imported into the first account once; the JSON file is preserved. Browser-local maps are migrated during registration and then cached separately by account in the browser.
+Story-map generation uses Groq’s GPT-OSS model first and automatically falls back to Gemini 3.5 Flash-Lite if Groq is unavailable or its draft fails validation. Configure `GEMINI_API_KEY` in `.env` to enable that fallback; Google AI Studio currently lists free text input/output for this model, but it still has project rate limits and free-tier prompts may be used to improve Google’s products. No free provider guarantees unlimited availability. Tavily supplies research sources. The API stores accounts, sessions, and user-owned maps in `server/data/helix.sqlite` (or `HELIX_DB_PATH`). Back up that database with the API stopped. Existing `server/data/library.json` records are imported into the first account once; the JSON file is preserved. Browser-local maps are migrated during registration and then cached separately by account in the browser.
 
 ## API overview
 

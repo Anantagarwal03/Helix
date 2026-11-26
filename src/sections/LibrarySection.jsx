@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { playClickSound } from '../utils/audio';
 import { useAuth } from '../auth/useAuth';
 import { loadSavedFilms, readCachedFilms, saveFilm as saveFilmToApi } from '../utils/libraryApi';
+import { MOVIES } from '../data/movies';
 
 import sixthSenseImg from '../assets/posters/sixth-sense.jpg';
 import donnieDarkoImg from '../assets/posters/donnie-darko.jpg';
@@ -19,7 +20,12 @@ const C = {
   emerald: '#34d399',
 };
 
-const FILTERS = ['All', 'Identity Reveal', 'Temporal Loop', 'Unreliable Reality', 'Psychological Descent', 'Revenge Trap'];
+const FILTERS = [
+  'All', 'Identity Reveal', 'Temporal Loop', 'Unreliable Reality', 'Psychological Descent', 'Revenge Trap',
+  'Dream Heist / Ambiguous Reality', 'Time Dilation / Gravity Message', 'Hidden Bunker / Class Reversal',
+  'Timeline Rewrites / Self-Erasure', 'Unreliable Narrator / Split Identity',
+  'Repeated Timeline / Alternate Reality', 'Story Within a Story / Emotional Revenge',
+];
 
 const FILTER_COLORS = {
   'All':                  C.cyan,
@@ -28,6 +34,13 @@ const FILTER_COLORS = {
   'Unreliable Reality':   C.amber,
   'Psychological Descent': C.magenta,
   'Revenge Trap':         '#ef4444',
+  'Dream Heist / Ambiguous Reality': '#38bdf8',
+  'Time Dilation / Gravity Message': '#a78bfa',
+  'Hidden Bunker / Class Reversal': '#fbbf24',
+  'Timeline Rewrites / Self-Erasure': '#34d399',
+  'Unreliable Narrator / Split Identity': '#fb7185',
+  'Repeated Timeline / Alternate Reality': '#22d3ee',
+  'Story Within a Story / Emotional Revenge': '#c084fc',
 };
 
 const readSavedValue = (key, fallback) => {
@@ -45,6 +58,20 @@ const libraryData = [
   { id: '3', detailId: 'zodiac', title: 'Zodiac', year: '2007', director: 'David Fincher', genre: ['Crime', 'Mystery'], twistTag: 'Unreliable Reality', nodes: 29, events: 54, image: zodiacImg, color: C.amber },
   { id: '4', detailId: 'taxi-driver', title: 'Taxi Driver', year: '1976', director: 'Martin Scorsese', genre: ['Crime', 'Drama'], twistTag: 'Psychological Descent', nodes: 21, events: 38, image: taxiDriverImg, color: C.violet },
   { id: '5', detailId: 'oldboy', title: 'Oldboy', year: '2003', director: 'Park Chan-wook', genre: ['Action', 'Drama'], twistTag: 'Revenge Trap', nodes: 24, events: 42, image: oldboyImg, color: C.magenta },
+  ...MOVIES.filter(movie => !['sixth-sense', 'donnie-darko', 'zodiac', 'taxi-driver', 'oldboy'].includes(movie.id))
+    .map(movie => ({
+      id: movie.id,
+      detailId: movie.id,
+      title: movie.title,
+      year: String(movie.year),
+      director: movie.director,
+      genre: movie.genres,
+      twistTag: movie.twistType,
+      nodes: movie.nodes,
+      events: movie.events,
+      image: movie.poster,
+      color: movie.accentColor,
+    })),
 ];
 
 const useTilt = (maxTilt = 9) => {
@@ -152,11 +179,14 @@ const MovieCard = ({ movie }) => {
       />
 
       <div className="w-full aspect-[2/3] overflow-hidden relative border border-white/[0.06] rounded-lg bg-black/40">
-        <img
-          src={movie.tmdb?.posterUrl || movie.image}
-          alt={movie.title}
-          className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500 sepia-[.12]"
-        />
+        {movie.tmdb?.posterUrl || movie.image
+          ? <img
+              src={movie.tmdb?.posterUrl || movie.image}
+              alt={movie.title}
+              onError={event => { event.currentTarget.style.display = 'none'; }}
+              className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500 sepia-[.12]"
+            />
+          : <div className="w-full h-full flex items-center justify-center p-5 text-center font-mono text-xs tracking-[0.25em] uppercase" style={{ background: `radial-gradient(ellipse at 50% 30%, ${movie.color}24, rgba(8,4,28,.95) 72%)`, color: `${movie.color}bb` }}>{movie.title}</div>}
         <div className="absolute inset-0 bg-gradient-to-t from-[#08041c] via-transparent to-transparent opacity-90" />
 
         <div
