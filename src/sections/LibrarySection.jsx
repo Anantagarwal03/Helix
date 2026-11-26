@@ -28,6 +28,15 @@ const FILTER_COLORS = {
   'Revenge Trap':         '#ef4444',
 };
 
+const readSavedValue = (key, fallback) => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    return saved ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const libraryData = [
   { id: '1', detailId: 'sixth-sense', title: 'The Sixth Sense', year: '1999', director: 'M. Night Shyamalan', genre: ['Psychological Thriller', 'Supernatural'], twistTag: 'Identity Reveal', nodes: 12, events: 23, image: sixthSenseImg, color: '#ef4444' },
   { id: '2', detailId: 'donnie-darko', title: 'Donnie Darko', year: '2001', director: 'Richard Kelly', genre: ['Sci-Fi', 'Psychological'], twistTag: 'Temporal Loop', nodes: 18, events: 31, image: donnieDarkoImg, color: C.cyan },
@@ -159,7 +168,9 @@ const MovieCard = ({ movie }) => {
           className="absolute top-2 right-2 z-30 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1"
           style={{ background: `${C.amber}14`, border: `1px solid ${C.amber}30`, color: C.amber }}
         >
-          {movie.tmdb?.rating ? `TMDB ${movie.tmdb.rating.toFixed(1)}` : 'TMDB —'}
+          {Number.isFinite(Number(movie.tmdb?.rating)) && Number(movie.tmdb.rating) > 0
+            ? `TMDB ${Number(movie.tmdb.rating).toFixed(1)}`
+            : 'TMDB —'}
         </div>
 
         <div className="absolute bottom-2 left-2 z-30 flex flex-wrap gap-1 max-w-[90%]">
@@ -206,7 +217,7 @@ const MovieCard = ({ movie }) => {
             </span>
           </div>
           {movie.detailId || movie.graphId ? <Link
-            to={movie.graphId ? `/graph?film=${encodeURIComponent(movie.graphId)}` : `/film/${movie.detailId}`}
+            to={`/film/${encodeURIComponent(movie.detailId || movie.graphId || movie.id)}`}
             className="text-[10px] font-mono font-bold tracking-wider uppercase transition-all duration-200 group-hover:translate-x-0.5"
             style={{ color: movie.color }}
           >
@@ -222,8 +233,11 @@ export default function LibrarySection() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [movies, setMovies] = useState(libraryData);
-  const [tmdbData, setTmdbData] = useState({});
+  const [movies, setMovies] = useState(() => {
+    const saved = readSavedValue('helix-added-films', []);
+    return [...libraryData, ...(Array.isArray(saved) ? saved : [])];
+  });
+  const [tmdbData, setTmdbData] = useState(() => readSavedValue('helix-tmdb-metadata', {}));
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
   const [showAddFilm, setShowAddFilm] = useState(false);
@@ -235,17 +249,7 @@ export default function LibrarySection() {
   const [storyDraft, setStoryDraft] = useState(null);
   const [storyGenerating, setStoryGenerating] = useState(false);
 
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('helix-added-films') || '[]');
-      setMovies([...libraryData, ...saved]);
-      setTmdbData(JSON.parse(localStorage.getItem('helix-tmdb-metadata') || '{}'));
-    } catch {
-      setMovies(libraryData);
-    }
-  }, []);
-
-  const syncCurrentFilms = async () => {
+  const syncCurrentFilms = useCallback(async () => {
     setSyncing(true);
     setSyncMessage('Fetching current film details from TMDB…');
     const results = await Promise.allSettled(libraryData.map(async movie => {
@@ -264,7 +268,14 @@ export default function LibrarySection() {
     localStorage.setItem('helix-tmdb-metadata', JSON.stringify(next));
     setSyncMessage(failures.length ? `Updated ${5 - failures.length} of 5. Could not match: ${failures.join(', ')}.` : 'All 5 films updated from TMDB.');
     setSyncing(false);
-  };
+  }, [tmdbData]);
+
+  const initialMetadataSyncStarted = useRef(false);
+  useEffect(() => {
+    if (initialMetadataSyncStarted.current || libraryData.every(movie => tmdbData[movie.id])) return;
+    initialMetadataSyncStarted.current = true;
+    void syncCurrentFilms();
+  }, [syncCurrentFilms, tmdbData]);
 
   const searchFilms = async (event) => {
     event.preventDefault();
@@ -313,9 +324,10 @@ export default function LibrarySection() {
     if (!storyDraft?.movie || !storyDraft?.storyGraph) return;
     const { movie: details, storyGraph } = storyDraft;
     const graphId = storyGraph.id;
+    const existingGeneratedMap = movies.some(item => item.graphId === graphId);
     const alreadyAdded = movies.some(item => item.id === graphId)
       || libraryData.some(item => item.title.toLowerCase() === details.title.toLowerCase() && String(item.year) === String(details.year));
-    if (alreadyAdded) {
+    if (alreadyAdded && !existingGeneratedMap) {
       setLookupError(`${details.title} (${details.year}) is already in the library.`);
       return;
     }
@@ -351,7 +363,7 @@ export default function LibrarySection() {
 
   const filteredMovies = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    return movies.map(movie => ({ ...movie, tmdb: tmdbData[movie.id] })).filter(m => {
+    return movies.map(movie => ({ ...movie, tmdb: tmdbData[movie.id] || movie.tmdb })).filter(m => {
       const matchesFilter = activeFilter === 'All' || m.twistTag === activeFilter;
       const matchesSearch = !q || (
         m.title.toLowerCase().includes(q) ||
@@ -364,6 +376,7 @@ export default function LibrarySection() {
   }, [activeFilter, searchQuery, movies, tmdbData]);
 
   const activeColor = FILTER_COLORS[activeFilter] || C.cyan;
+  const updatingStoryMap = Boolean(storyDraft && movies.some(movie => movie.graphId === storyDraft.storyGraph.id));
 
   return (
     <div className="min-h-screen bg-transparent text-white p-6 md:p-8 overflow-y-auto w-full box-border pb-24">
@@ -513,7 +526,7 @@ export default function LibrarySection() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => { setStoryDraft(null); generateStoryMap(); }} disabled={storyGenerating} className="rounded-md py-2 text-xs font-semibold border border-white/10 text-slate-300 disabled:opacity-50">Regenerate</button>
-                <button type="button" onClick={addFilm} className="rounded-md py-2 text-xs font-bold" style={{ background: C.cyan, color: '#030014' }}>Approve & add to library</button>
+                <button type="button" onClick={addFilm} className="rounded-md py-2 text-xs font-bold" style={{ background: C.cyan, color: '#030014' }}>{updatingStoryMap ? 'Approve & replace story map' : 'Approve & add to library'}</button>
               </div>
               <p className="text-[9px] text-slate-500">AI-generated maps can contain mistakes. Review the source links and plot details before approval.</p>
             </div>}

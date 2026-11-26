@@ -3,6 +3,15 @@ import { useParams, Link } from 'react-router-dom'
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion'
 import { MOVIES } from '../data/movies'
 
+const getSavedFilm = id => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('helix-added-films') || '[]')
+    return Array.isArray(saved) ? saved.find(movie => movie.id === id || movie.graphId === id) || null : null
+  } catch {
+    return null
+  }
+}
+
 const SectionReveal = ({ children, delay = 0, className = '' }) => (
   <motion.div
     className={className}
@@ -58,30 +67,38 @@ export default function FilmDetail() {
   }, [])
 
   useEffect(() => {
-    const targetFilm = MOVIES.find(m => m.id === id)
+    const targetFilm = MOVIES.find(m => m.id === id) || getSavedFilm(id)
     if (targetFilm) {
+      const storyNodes = targetFilm.storyGraph?.nodes || []
+      const tmdb = targetFilm.tmdb || targetFilm
+      const characters = storyNodes.filter(node => node.type === 'character')
       setFilm({
-        id: targetFilm.id,
+        id: targetFilm.graphId || targetFilm.id,
         title: targetFilm.title,
         director: targetFilm.director,
         releaseYear: targetFilm.year,
-        poster: targetFilm.posterUrl || targetFilm.poster,
-        tagline: targetFilm.tagline || 'Deception fractures structural reality parameters apart.',
-        runtime: targetFilm.runtime || '125 min',
-        summary: targetFilm.synopsis || targetFilm.summary || 'This cinematic index record has been successfully mapped via the local frontend infrastructure.',
-        genres: targetFilm.genres || ['Thriller', 'Mystery'],
-        themes: targetFilm.themes || ['Perception Shift', 'Obsession'],
-        cast: targetFilm.cast || [{ actor: targetFilm.director, role: 'Director Archival Core' }],
-        boxOffice: targetFilm.boxOffice || 'Classified Transaction Records',
-        reception: targetFilm.reception || `${targetFilm.complexity || 'High'} Tier Evaluation Matrix`,
+        poster: tmdb.posterUrl || targetFilm.posterUrl || targetFilm.image || targetFilm.poster,
+        tagline: targetFilm.tagline || 'A sourced story map, ready to explore.',
+        runtime: targetFilm.runtime || 'Runtime unavailable',
+        summary: targetFilm.synopsis || targetFilm.overview || storyNodes.find(node => node.type === 'film')?.revealSubtext || targetFilm.storyGraph?.summary || 'This film has been added to the library.',
+        genres: tmdb.genres || targetFilm.genres || targetFilm.genre || ['Genre unavailable'],
+        themes: targetFilm.themes || [targetFilm.twistTag || targetFilm.storyGraph?.twistType || 'Story analysis'],
+        cast: targetFilm.cast || (characters.length ? characters.map(node => ({ actor: node.label, role: node.revealClassification || 'Mapped character' })) : [{ actor: targetFilm.director, role: 'Director Archival Core' }]),
+        boxOffice: targetFilm.boxOffice || 'Box office data unavailable',
+        reception: targetFilm.reception || (Number(tmdb.rating) > 0 ? `TMDB ${Number(tmdb.rating).toFixed(1)} / 10 · ${Number(tmdb.voteCount || 0).toLocaleString()} votes` : 'Rating unavailable'),
         soundtrack: targetFilm.soundtrack || 'Thematic Orchestration Ambient Waves',
         tracklist: targetFilm.tracklist || ['Main Title Narrative Theme'],
+        rating: Number(tmdb.rating) > 0 ? Number(tmdb.rating) : null,
+        voteCount: Number(tmdb.voteCount || 0),
+        ratingUrl: tmdb.sourceUrl,
       })
+    } else {
+      setFilm(null)
     }
   }, [id])
 
   useEffect(() => {
-    const targetFilm = MOVIES.find(m => m.id === id)
+    const targetFilm = MOVIES.find(m => m.id === id) || getSavedFilm(id)
     if (!targetFilm) return
     const controller = new AbortController()
     setWatchLoading(true)
@@ -246,6 +263,12 @@ export default function FilmDetail() {
             <span>{film.releaseYear}</span>
             <span className="text-white/30">•</span>
             <span>{film.runtime}</span>
+            {film.rating && <>
+              <span className="text-white/30">•</span>
+              <a href={film.ratingUrl || 'https://www.themoviedb.org'} target="_blank" rel="noreferrer" className="text-amber-300 hover:text-amber-200">
+                TMDB ★ {film.rating.toFixed(1)} <span className="text-slate-500">({film.voteCount.toLocaleString()} votes)</span>
+              </a>
+            </>}
           </motion.div>
 
           {/* Genre tags */}
