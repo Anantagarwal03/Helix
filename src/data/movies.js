@@ -17,7 +17,7 @@ export const MOVIES = [
     twistType: "Identity Reveal",
     accentColor: "#991b1b",
     twistScore: "9.8",
-    nodes: 10,
+    nodes: 9,
     events: 4
   },
   {
@@ -32,7 +32,7 @@ export const MOVIES = [
     twistType: "Temporal Loop",
     accentColor: "#1e3a8a",
     twistScore: "9.4",
-    nodes: 11,
+    nodes: 10,
     events: 6
   },
   {
@@ -47,7 +47,7 @@ export const MOVIES = [
     twistType: "Unreliable Reality",
     accentColor: "#15803d",
     twistScore: "8.7",
-    nodes: 9,
+    nodes: 8,
     events: 4
   },
   {
@@ -62,7 +62,7 @@ export const MOVIES = [
     twistType: "Psychological Descent",
     accentColor: "#b45309",
     twistScore: "8.5",
-    nodes: 10,
+    nodes: 9,
     events: 5
   },
   {
@@ -77,50 +77,50 @@ export const MOVIES = [
     twistType: "Revenge Trap",
     accentColor: "#6b21a8",
     twistScore: "9.9",
-    nodes: 9,
+    nodes: 8,
     events: 4
   },
   {
     id: 'inception', title: 'Inception', director: 'Christopher Nolan', year: 2010,
     complexity: 'High', poster: null, posterUrl: null,
     genres: ['Science Fiction', 'Heist'], twistType: 'Dream Heist / Ambiguous Reality',
-    accentColor: '#38bdf8', twistScore: '—', nodes: 12, events: 6,
+    accentColor: '#38bdf8', twistScore: '—', nodes: 11, events: 6,
   },
   {
     id: 'interstellar', title: 'Interstellar', director: 'Christopher Nolan', year: 2014,
     complexity: 'High', poster: null, posterUrl: null,
     genres: ['Science Fiction', 'Adventure'], twistType: 'Time Dilation / Gravity Message',
-    accentColor: '#a78bfa', twistScore: '—', nodes: 13, events: 8,
+    accentColor: '#a78bfa', twistScore: '—', nodes: 12, events: 8,
   },
   {
     id: 'parasite', title: 'Parasite', director: 'Bong Joon-ho', year: 2019,
     complexity: 'High', poster: null, posterUrl: null,
     genres: ['Thriller', 'Drama'], twistType: 'Hidden Bunker / Class Reversal',
-    accentColor: '#fbbf24', twistScore: '—', nodes: 12, events: 6,
+    accentColor: '#fbbf24', twistScore: '—', nodes: 11, events: 6,
   },
   {
     id: 'butterfly-effect', title: 'The Butterfly Effect', director: 'Eric Bress & J. Mackye Gruber', year: 2004,
     complexity: 'High', poster: null, posterUrl: null,
     genres: ['Science Fiction', 'Thriller'], twistType: 'Timeline Rewrites / Self-Erasure',
-    accentColor: '#34d399', twistScore: '—', nodes: 11, events: 6,
+    accentColor: '#34d399', twistScore: '—', nodes: 10, events: 6,
   },
   {
     id: 'fight-club', title: 'Fight Club', director: 'David Fincher', year: 1999,
     complexity: 'High', poster: null, posterUrl: null,
     genres: ['Drama', 'Thriller'], twistType: 'Unreliable Narrator / Split Identity',
-    accentColor: '#fb7185', twistScore: '—', nodes: 12, events: 7,
+    accentColor: '#fb7185', twistScore: '—', nodes: 11, events: 7,
   },
   {
     id: 'source-code', title: 'Source Code', director: 'Duncan Jones', year: 2011,
     complexity: 'High', poster: null, posterUrl: null,
     genres: ['Science Fiction', 'Thriller'], twistType: 'Repeated Timeline / Alternate Reality',
-    accentColor: '#22d3ee', twistScore: '—', nodes: 12, events: 6,
+    accentColor: '#22d3ee', twistScore: '—', nodes: 11, events: 6,
   },
   {
     id: 'nocturnal-animals', title: 'Nocturnal Animals', director: 'Tom Ford', year: 2016,
     complexity: 'High', poster: null, posterUrl: null,
     genres: ['Thriller', 'Drama'], twistType: 'Story Within a Story / Emotional Revenge',
-    accentColor: '#c084fc', twistScore: '—', nodes: 11, events: 5,
+    accentColor: '#c084fc', twistScore: '—', nodes: 10, events: 5,
   },
 ];
 

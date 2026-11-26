@@ -5,12 +5,7 @@ import { playClickSound } from '../utils/audio';
 import { useAuth } from '../auth/useAuth';
 import { loadSavedFilms, readCachedFilms, saveFilm as saveFilmToApi } from '../utils/libraryApi';
 import { MOVIES } from '../data/movies';
-
-import sixthSenseImg from '../assets/posters/sixth-sense.jpg';
-import donnieDarkoImg from '../assets/posters/donnie-darko.jpg';
-import zodiacImg from '../assets/posters/zodiac.jpg';
-import taxiDriverImg from '../assets/posters/taxi-driver.jpg';
-import oldboyImg from '../assets/posters/oldboy.jpg';
+import { STORY_GRAPHS } from '../data/storyGraphs';
 
 const C = {
   cyan:    '#00f2fe',
@@ -18,29 +13,6 @@ const C = {
   magenta: '#ec4899',
   amber:   '#f59e0b',
   emerald: '#34d399',
-};
-
-const FILTERS = [
-  'All', 'Identity Reveal', 'Temporal Loop', 'Unreliable Reality', 'Psychological Descent', 'Revenge Trap',
-  'Dream Heist / Ambiguous Reality', 'Time Dilation / Gravity Message', 'Hidden Bunker / Class Reversal',
-  'Timeline Rewrites / Self-Erasure', 'Unreliable Narrator / Split Identity',
-  'Repeated Timeline / Alternate Reality', 'Story Within a Story / Emotional Revenge',
-];
-
-const FILTER_COLORS = {
-  'All':                  C.cyan,
-  'Identity Reveal':      C.violet,
-  'Temporal Loop':        C.cyan,
-  'Unreliable Reality':   C.amber,
-  'Psychological Descent': C.magenta,
-  'Revenge Trap':         '#ef4444',
-  'Dream Heist / Ambiguous Reality': '#38bdf8',
-  'Time Dilation / Gravity Message': '#a78bfa',
-  'Hidden Bunker / Class Reversal': '#fbbf24',
-  'Timeline Rewrites / Self-Erasure': '#34d399',
-  'Unreliable Narrator / Split Identity': '#fb7185',
-  'Repeated Timeline / Alternate Reality': '#22d3ee',
-  'Story Within a Story / Emotional Revenge': '#c084fc',
 };
 
 const readSavedValue = (key, fallback) => {
@@ -53,13 +25,10 @@ const readSavedValue = (key, fallback) => {
 };
 
 const libraryData = [
-  { id: '1', detailId: 'sixth-sense', title: 'The Sixth Sense', year: '1999', director: 'M. Night Shyamalan', genre: ['Psychological Thriller', 'Supernatural'], twistTag: 'Identity Reveal', nodes: 12, events: 23, image: sixthSenseImg, color: '#ef4444' },
-  { id: '2', detailId: 'donnie-darko', title: 'Donnie Darko', year: '2001', director: 'Richard Kelly', genre: ['Sci-Fi', 'Psychological'], twistTag: 'Temporal Loop', nodes: 18, events: 31, image: donnieDarkoImg, color: C.cyan },
-  { id: '3', detailId: 'zodiac', title: 'Zodiac', year: '2007', director: 'David Fincher', genre: ['Crime', 'Mystery'], twistTag: 'Unreliable Reality', nodes: 29, events: 54, image: zodiacImg, color: C.amber },
-  { id: '4', detailId: 'taxi-driver', title: 'Taxi Driver', year: '1976', director: 'Martin Scorsese', genre: ['Crime', 'Drama'], twistTag: 'Psychological Descent', nodes: 21, events: 38, image: taxiDriverImg, color: C.violet },
-  { id: '5', detailId: 'oldboy', title: 'Oldboy', year: '2003', director: 'Park Chan-wook', genre: ['Action', 'Drama'], twistTag: 'Revenge Trap', nodes: 24, events: 42, image: oldboyImg, color: C.magenta },
-  ...MOVIES.filter(movie => !['sixth-sense', 'donnie-darko', 'zodiac', 'taxi-driver', 'oldboy'].includes(movie.id))
-    .map(movie => ({
+  ...MOVIES.map(movie => {
+    const story = STORY_GRAPHS[movie.id];
+    const storyNodes = story?.nodes || [];
+    return {
       id: movie.id,
       detailId: movie.id,
       title: movie.title,
@@ -67,11 +36,12 @@ const libraryData = [
       director: movie.director,
       genre: movie.genres,
       twistTag: movie.twistType,
-      nodes: movie.nodes,
-      events: movie.events,
+      nodes: storyNodes.filter(node => node.type !== 'film').length || movie.nodes,
+      events: storyNodes.filter(node => node.type === 'event').length || movie.events,
       image: movie.poster,
       color: movie.accentColor,
-    })),
+    };
+  }),
 ];
 
 const useTilt = (maxTilt = 9) => {
@@ -311,7 +281,7 @@ export default function LibrarySection() {
     });
     setTmdbData(next);
     localStorage.setItem('helix-tmdb-metadata', JSON.stringify(next));
-    setSyncMessage(failures.length ? `Updated ${5 - failures.length} of 5. Could not match: ${failures.join(', ')}.` : 'All 5 films updated from TMDB.');
+    setSyncMessage(failures.length ? `Updated ${libraryData.length - failures.length} of ${libraryData.length}. Could not match: ${failures.join(', ')}.` : `All ${libraryData.length} films updated from TMDB.`);
     setSyncing(false);
   }, [tmdbData]);
 
@@ -426,8 +396,13 @@ export default function LibrarySection() {
         m.genre.some(g => g.toLowerCase().includes(q))
       );
       return matchesFilter && matchesSearch;
-    });
+    }).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
   }, [activeFilter, searchQuery, movies, tmdbData]);
+  const storyFilters = useMemo(() => [
+    'All',
+    ...[...new Set(movies.map(movie => movie.twistTag).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+  ], [movies]);
 
   const updatingStoryMap = Boolean(storyDraft && movies.some(movie => movie.graphId === storyDraft.storyGraph.id));
 
@@ -471,26 +446,21 @@ export default function LibrarySection() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {FILTERS.map((filter) => {
-            const fc = FILTER_COLORS[filter];
-            const isActive = activeFilter === filter;
-            return (
-              <button
-                key={filter}
-                onClick={() => { playClickSound(); setActiveFilter(filter); }}
-                className="px-3 py-1.5 rounded-md font-mono text-[10px] tracking-[0.08em] uppercase border transition-all duration-200"
-                style={{
-                  background: isActive ? `${fc}10` : 'transparent',
-                  borderColor: isActive ? `${fc}45` : 'rgba(255,255,255,0.06)',
-                  color: isActive ? fc : 'rgba(255,255,255,0.32)',
-                  boxShadow: isActive ? `0 0 14px ${fc}18` : 'none',
-                }}
-              >
-                {filter}
-              </button>
-            );
-          })}
+        <div className="flex justify-end">
+          <label className="flex items-center gap-3 rounded-lg px-3 py-2.5 border border-white/[0.08] bg-black/30">
+            <span className="text-[9px] font-mono uppercase tracking-[0.16em] text-slate-500">Story type</span>
+            <select
+              value={activeFilter}
+              onChange={event => { playClickSound(); setActiveFilter(event.target.value); }}
+              className="max-w-[55vw] sm:max-w-xs bg-transparent text-[10px] font-mono uppercase tracking-wider text-cyan-300 focus:outline-none"
+              style={{ colorScheme: 'dark' }}
+              aria-label="Filter films by story type"
+            >
+              {storyFilters.map(filter => (
+                <option key={filter} value={filter} className="bg-[#090914] text-slate-200">{filter}</option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
