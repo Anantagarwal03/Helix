@@ -1,16 +1,9 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion'
 import { MOVIES } from '../data/movies'
-
-const getSavedFilm = id => {
-  try {
-    const saved = JSON.parse(localStorage.getItem('helix-added-films') || '[]')
-    return Array.isArray(saved) ? saved.find(movie => movie.id === id || movie.graphId === id) || null : null
-  } catch {
-    return null
-  }
-}
+import { useAuth } from '../auth/useAuth'
+import { loadSavedFilms, readCachedFilms } from '../utils/libraryApi'
 
 const SectionReveal = ({ children, delay = 0, className = '' }) => (
   <motion.div
@@ -42,9 +35,9 @@ const SectionLabel = ({ children }) => (
 
 export default function FilmDetail() {
   const { id } = useParams()
-  const [film, setFilm] = useState(null)
+  const { user } = useAuth()
+  const [savedFilmRecords, setSavedFilmRecords] = useState([])
   const [watchData, setWatchData] = useState(null)
-  const [watchLoading, setWatchLoading] = useState(false)
   const [region, setRegion] = useState('IN')
   const containerRef = useRef(null)
 
@@ -57,6 +50,12 @@ export default function FilmDetail() {
   const posterY     = useTransform(smoothProgress, [0, 1], ['0%', '8%'])
 
   useEffect(() => {
+    let active = true
+    loadSavedFilms(user.id).then(saved => { if (active) setSavedFilmRecords(saved) }).catch(() => { if (active) setSavedFilmRecords(readCachedFilms(user.id)) })
+    return () => { active = false }
+  }, [user.id])
+
+  useEffect(() => {
     if (window.gsap) window.gsap.killTweensOf('*')
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     document.body.style.overflow = 'auto'
@@ -66,13 +65,13 @@ export default function FilmDetail() {
     document.documentElement.style.height = 'auto'
   }, [])
 
-  useEffect(() => {
-    const targetFilm = MOVIES.find(m => m.id === id) || getSavedFilm(id)
-    if (targetFilm) {
-      const storyNodes = targetFilm.storyGraph?.nodes || []
-      const tmdb = targetFilm.tmdb || targetFilm
-      const characters = storyNodes.filter(node => node.type === 'character')
-      setFilm({
+  const film = useMemo(() => {
+    const targetFilm = MOVIES.find(movie => movie.id === id) || savedFilmRecords.find(movie => movie.id === id || movie.graphId === id)
+    if (!targetFilm) return null
+    const storyNodes = targetFilm.storyGraph?.nodes || []
+    const tmdb = targetFilm.tmdb || targetFilm
+    const characters = storyNodes.filter(node => node.type === 'character')
+    return {
         id: targetFilm.graphId || targetFilm.id,
         title: targetFilm.title,
         director: targetFilm.director,
@@ -91,28 +90,25 @@ export default function FilmDetail() {
         rating: Number(tmdb.rating) > 0 ? Number(tmdb.rating) : null,
         voteCount: Number(tmdb.voteCount || 0),
         ratingUrl: tmdb.sourceUrl,
-      })
-    } else {
-      setFilm(null)
     }
-  }, [id])
+  }, [id, savedFilmRecords])
 
+  const availabilityKey = `${id}:${region}`
+  const watchLoading = Boolean(film && watchData?.key !== availabilityKey)
   useEffect(() => {
-    const targetFilm = MOVIES.find(m => m.id === id) || getSavedFilm(id)
+    const targetFilm = MOVIES.find(m => m.id === id) || savedFilmRecords.find(movie => movie.id === id || movie.graphId === id)
     if (!targetFilm) return
     const controller = new AbortController()
-    setWatchLoading(true)
     fetch(`/api/movie-watch-providers?title=${encodeURIComponent(targetFilm.title)}&year=${targetFilm.year}&region=${region}`, { signal: controller.signal })
       .then(async response => {
         const data = await response.json()
         if (!response.ok) throw new Error(data.error || 'Availability is unavailable.')
         return data
       })
-      .then(setWatchData)
-      .catch(error => { if (error.name !== 'AbortError') setWatchData({ region, providers: [], link: null }) })
-      .finally(() => { if (!controller.signal.aborted) setWatchLoading(false) })
+      .then(data => setWatchData({ ...data, key: availabilityKey }))
+      .catch(error => { if (error.name !== 'AbortError') setWatchData({ key: availabilityKey, region, providers: [], link: null }) })
     return () => controller.abort()
-  }, [id, region])
+  }, [id, region, savedFilmRecords, availabilityKey])
 
   if (!film) {
     return (

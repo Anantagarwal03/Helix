@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../auth/useAuth';
+import { loadSavedFilms, readCachedFilms } from '../utils/libraryApi';
 import DecryptedText from '../components/animations/DecryptedText';
 import TwistGraph3D from '../components/TwistGraph3D';
 import { MOVIES } from '../data/movies';
@@ -246,9 +248,10 @@ const SPOILER_OPTIONS = [
 ];
 
 const GraphSection = () => {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const routeFilmId = searchParams.get('film');
-  const [selectedFilmId, setSelectedFilmId] = useState(() => MOVIES.some(movie => movie.id === routeFilmId) ? routeFilmId : MOVIES[0].id);
+  const [selectedFilmId, setSelectedFilmId] = useState(() => routeFilmId || MOVIES[0].id);
   const [savedFilmRecords, setSavedFilmRecords] = useState([]);
   const [visibleTypes, setVisibleTypes] = useState(['character', 'event', 'twist']);
   const [spoilerLevel, setSpoilerLevel] = useState(0);
@@ -257,13 +260,12 @@ const GraphSection = () => {
   const [selectedConnectionId, setSelectedConnectionId] = useState(null);
   const graphRef = useRef(null);
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('helix-added-films') || '[]');
-      setSavedFilmRecords(Array.isArray(saved) ? saved.filter(movie => movie.storyGraph?.nodes && movie.storyGraph?.links) : []);
-    } catch {
-      setSavedFilmRecords([]);
-    }
-  }, []);
+    let active = true;
+    loadSavedFilms(user.id)
+      .then(saved => { if (active) setSavedFilmRecords(saved.filter(movie => movie.storyGraph?.nodes && movie.storyGraph?.links)); })
+      .catch(() => { if (active) setSavedFilmRecords(readCachedFilms(user.id).filter(movie => movie.storyGraph?.nodes && movie.storyGraph?.links)); });
+    return () => { active = false; };
+  }, [user.id]);
   const graphMovies = useMemo(() => [
     ...MOVIES,
     ...savedFilmRecords.map(movie => ({
@@ -276,11 +278,11 @@ const GraphSection = () => {
   ], [savedFilmRecords]);
   const customStoryGraphs = useMemo(() => Object.fromEntries(savedFilmRecords.map(movie => [movie.graphId || movie.id, movie.storyGraph])), [savedFilmRecords]);
   const allStoryGraphs = useMemo(() => ({ ...STORY_GRAPHS, ...customStoryGraphs }), [customStoryGraphs]);
-  useEffect(() => {
-    if (routeFilmId && graphMovies.some(movie => movie.id === routeFilmId)) setSelectedFilmId(routeFilmId);
-    else if (!graphMovies.some(movie => movie.id === selectedFilmId)) setSelectedFilmId(MOVIES[0].id);
-  }, [routeFilmId, graphMovies, selectedFilmId]);
-  const selectedFilm = graphMovies.find(movie => movie.id === selectedFilmId) || MOVIES[0];
+  const selectedFilmIdExists = graphMovies.some(movie => movie.id === selectedFilmId);
+  const activeFilmId = routeFilmId && graphMovies.some(movie => movie.id === routeFilmId)
+    ? routeFilmId
+    : selectedFilmIdExists ? selectedFilmId : MOVIES[0].id;
+  const selectedFilm = graphMovies.find(movie => movie.id === activeFilmId) || MOVIES[0];
 
   const graphData = useMemo(() => {
     const selectedStory = allStoryGraphs[selectedFilm.id] || { nodes: [], links: [] };
@@ -422,7 +424,7 @@ const GraphSection = () => {
         </div>
         <label className="flex flex-col gap-1 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
           Film
-          <select value={selectedFilmId} onChange={event => { setSelectedFilmId(event.target.value); setSearchParams({ film: event.target.value }); setSelectedNode(null); setSelectedConnectionId(null); }} className="min-w-56 rounded-lg px-3 py-2 text-sm normal-case tracking-normal text-white bg-black/50 border border-white/10 focus:outline-none focus:border-cyan-400/50">
+          <select value={activeFilmId} onChange={event => { setSelectedFilmId(event.target.value); setSearchParams({ film: event.target.value }); setSelectedNode(null); setSelectedConnectionId(null); }} className="min-w-56 rounded-lg px-3 py-2 text-sm normal-case tracking-normal text-white bg-black/50 border border-white/10 focus:outline-none focus:border-cyan-400/50">
             {graphMovies.map(movie => <option key={movie.id} value={movie.id}>{movie.title} ({movie.year})</option>)}
           </select>
         </label>

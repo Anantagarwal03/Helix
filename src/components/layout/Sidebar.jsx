@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from 'react'
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation, Link, useNavigate } from 'react-router-dom'
 import { playClickSound } from '../../utils/audio'
 import { isNavItemActive } from '../../utils/navigation'
+import { useAuth } from '../../auth/useAuth'
 
 const NAV = [
   {
@@ -135,9 +136,15 @@ const MagneticNavItem = ({ item, active, isCollapsed, moviesCount }) => {
 
 export default function Sidebar({ moviesCount }) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, signOut } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
   const activeItem = NAV.find(item => isNavItemActive(location.pathname, item))
   const activeAccent = activeItem?.accent || '#00f2fe'
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <>
@@ -243,19 +250,24 @@ export default function Sidebar({ moviesCount }) {
           </nav>
         </div>
 
-        {!collapsed && (
-          <div
-            className="flex-shrink-0 px-4 py-3"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+        <div
+          className={`flex-shrink-0 py-3 ${collapsed ? 'px-2' : 'px-3'}`}
+          style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+        >
+          {!collapsed && <div className="mb-3 truncate px-1 text-[9px] font-mono text-slate-500" title={user?.email}>{user?.email}</div>}
+          <button
+            type="button"
+            onClick={handleSignOut}
+            title={collapsed ? 'Sign out' : undefined}
+            aria-label="Sign out"
+            className={`flex w-full items-center rounded-lg py-2 text-left text-[11px] text-slate-400 transition hover:bg-white/5 hover:text-white ${collapsed ? 'justify-center' : 'gap-2 px-2'}`}
           >
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#34d399', boxShadow: '0 0 6px #34d399' }} />
-              <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                System Online
-              </span>
-            </div>
-          </div>
-        )}
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 2.5H3.5v11H6M9.5 5l3 3-3 3M5.5 8h7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {!collapsed && 'Sign out'}
+          </button>
+        </div>
       </aside>
     </>
   )

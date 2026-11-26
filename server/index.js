@@ -1,9 +1,14 @@
+/* global process */
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
+import { createLibraryStore } from './library-store.js';
+import { validateFilm } from './library-validation.js';
+import { createSessionToken, hashPassword, hashSessionToken, normalizeEmail, SESSION_DURATION_MS, validateCredentials, verifyPassword } from './auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,11 +31,127 @@ const getTmdbApiKey = () => getProjectEnvValue('TMDB_API_KEY');
 
 const app = express();
 const PORT = Number(process.env.HELIX_API_PORT || 5001);
+export const store = createLibraryStore();
+const SESSION_COOKIE = 'helix.sid';
+const allowedOrigins = (process.env.HELIX_CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174')
+  .split(',').map(origin => origin.trim()).filter(Boolean);
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174']
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Origin is not allowed by Helix API CORS policy.'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
 }));
-app.use(express.json({ limit: '12kb' }));
+app.use(express.json({ limit: '1mb', strict: true }));
+app.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
+const authenticationAttempts = new Map();
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_ATTEMPT_LIMIT = 10;
+function canAttemptAuthentication(ip) {
+  const now = Date.now();
+  const attempts = (authenticationAttempts.get(ip) || []).filter(time => now - time < AUTH_WINDOW_MS);
+  if (attempts.length >= AUTH_ATTEMPT_LIMIT) {
+    authenticationAttempts.set(ip, attempts);
+    return false;
+  }
+  attempts.push(now);
+  authenticationAttempts.set(ip, attempts);
+  if (authenticationAttempts.size > 5000) {
+    for (const [key, values] of authenticationAttempts) {
+      if (!values.some(time => now - time < AUTH_WINDOW_MS)) authenticationAttempts.delete(key);
+    }
+  }
+  return true;
+}
+
+function readSessionToken(req) {
+  const cookies = String(req.headers.cookie || '').split(';');
+  const entry = cookies.find(cookie => cookie.trim().startsWith(`${SESSION_COOKIE}=`));
+  return entry ? decodeURIComponent(entry.trim().slice(SESSION_COOKIE.length + 1)) : '';
+}
+
+function setSessionCookie(res, token) {
+  const maxAge = Math.floor(SESSION_DURATION_MS / 1000);
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`);
+}
+
+function clearSessionCookie(res) {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`);
+}
+
+function requireAuth(req, res, next) {
+  const token = readSessionToken(req);
+  const session = token && store.getSession(hashSessionToken(token));
+  if (!session) return res.status(401).json({ error: 'Sign in to continue.' });
+  req.user = { id: session.id, email: session.email };
+  req.sessionTokenHash = hashSessionToken(token);
+  next();
+}
+
+function createUserSession(user, res) {
+  const token = createSessionToken();
+  store.createSession({ tokenHash: hashSessionToken(token), userId: user.id, expiresAt: Date.now() + SESSION_DURATION_MS });
+  setSessionCookie(res, token);
+  return { id: user.id, email: user.email };
+}
+
+app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+
+app.post('/api/auth/register', async (req, res, next) => {
+  if (!canAttemptAuthentication(req.ip)) return res.status(429).json({ error: 'Too many sign-in attempts. Try again in 15 minutes.' });
+  const email = normalizeEmail(req.body?.email);
+  const password = req.body?.password;
+  const validationError = validateCredentials(email, password);
+  if (validationError) return res.status(400).json({ error: validationError });
+  const legacyFilms = req.body?.legacyFilms || [];
+  if (!Array.isArray(legacyFilms) || legacyFilms.length > 25) return res.status(400).json({ error: 'Legacy import can contain up to 25 films.' });
+  const legacyIds = new Set();
+  for (const film of legacyFilms) {
+    const error = validateFilm(film);
+    if (error) return res.status(400).json({ error: `Legacy import rejected: ${error}` });
+    if (legacyIds.has(film.id)) return res.status(400).json({ error: 'Legacy films must have unique IDs.' });
+    legacyIds.add(film.id);
+  }
+  try {
+    const user = store.createUser({ id: randomUUID(), email, passwordHash: await hashPassword(password) });
+    if (legacyFilms.length) store.importFilms(user.id, legacyFilms);
+    return res.status(201).json({ user: createUserSession(user, res) });
+  } catch (error) {
+    if (String(error.message).includes('UNIQUE constraint failed: users.email')) return res.status(409).json({ error: 'An account with that email already exists.' });
+    return next(error);
+  }
+});
+
+app.post('/api/auth/login', async (req, res, next) => {
+  if (!canAttemptAuthentication(req.ip)) return res.status(429).json({ error: 'Too many sign-in attempts. Try again in 15 minutes.' });
+  const email = normalizeEmail(req.body?.email);
+  const password = req.body?.password;
+  if (typeof password !== 'string' || !email) return res.status(400).json({ error: 'Enter your email and password.' });
+  try {
+    const user = store.getUserByEmail(email);
+    const valid = user ? await verifyPassword(password, user.passwordHash) : false;
+    if (!valid) return res.status(401).json({ error: 'Email or password is incorrect.' });
+    return res.json({ user: createUserSession(user, res) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.get('/api/auth/session', requireAuth, (req, res) => res.json({ user: req.user }));
+app.post('/api/auth/logout', (req, res) => {
+  const token = readSessionToken(req);
+  if (token) store.deleteSession(hashSessionToken(token));
+  clearSessionCookie(res);
+  res.status(204).end();
+});
 
 const STORY_MAP_SCHEMA = {
   type: 'object',
@@ -109,7 +230,7 @@ const createStoryNodeId = (filmId, label, index) => {
   return `${filmId}-${slug}-${index + 1}`;
 };
 
-app.post('/api/generate-story-map', async (req, res) => {
+app.post('/api/generate-story-map', requireAuth, async (req, res) => {
   const providerId = Number(req.body?.providerId);
   if (!Number.isSafeInteger(providerId) || providerId <= 0) {
     return res.status(400).json({ error: 'Choose a movie from the TMDB search results first.' });
@@ -414,7 +535,7 @@ app.post('/api/generate-story-map', async (req, res) => {
   }
 });
 
-app.get('/api/search-movies', async (req, res) => {
+app.get('/api/search-movies', requireAuth, async (req, res) => {
   const query = String(req.query.query || '').trim();
   if (query.length < 2) {
     return res.status(400).json({ error: 'Enter at least two characters to search.' });
@@ -450,7 +571,7 @@ app.get('/api/search-movies', async (req, res) => {
   }
 });
 
-app.get('/api/movie-metadata', async (req, res) => {
+app.get('/api/movie-metadata', requireAuth, async (req, res) => {
   const title = String(req.query.title || '').trim();
   const year = String(req.query.year || '').trim();
   if (!title || !year) return res.status(400).json({ error: 'A movie title and year are required.' });
@@ -493,7 +614,7 @@ app.get('/api/movie-metadata', async (req, res) => {
   }
 });
 
-app.get('/api/movie-watch-providers', async (req, res) => {
+app.get('/api/movie-watch-providers', requireAuth, async (req, res) => {
   const region = String(req.query.region || 'IN').toUpperCase();
   const title = String(req.query.title || '').trim();
   const year = String(req.query.year || '').trim();
@@ -530,22 +651,81 @@ app.get('/api/movie-watch-providers', async (req, res) => {
   }
 });
 
+app.get('/api/library', requireAuth, async (req, res, next) => {
+  try {
+    res.json({ films: store.listFilms(req.user.id) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/library/:filmId', requireAuth, async (req, res, next) => {
+  try {
+    const film = store.findFilm(req.user.id, req.params.filmId);
+    if (!film) return res.status(404).json({ error: 'Saved film was not found.' });
+    res.set('Cache-Control', 'no-store');
+    res.json({ film });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/library/:filmId', requireAuth, async (req, res, next) => {
+  const film = req.body?.film;
+  if (!film || film.id !== req.params.filmId) return res.status(400).json({ error: 'The URL and film IDs must match.' });
+  const validationError = validateFilm(film);
+  if (validationError) return res.status(400).json({ error: validationError });
+  try {
+    store.saveFilm(req.user.id, film);
+    res.status(200).json({ film });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/library/import', requireAuth, async (req, res, next) => {
+  const films = req.body?.films;
+  if (!Array.isArray(films) || films.length > 25) return res.status(400).json({ error: 'Provide up to 25 saved films to import.' });
+  const ids = new Set();
+  for (const film of films) {
+    const validationError = validateFilm(film);
+    if (validationError) return res.status(400).json({ error: validationError });
+    if (ids.has(film.id)) return res.status(400).json({ error: 'Imported films must have unique IDs.' });
+    ids.add(film.id);
+  }
+  try {
+    res.status(200).json(store.importFilms(req.user.id, films));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/library/:filmId', requireAuth, async (req, res, next) => {
+  try {
+    const removed = store.removeFilm(req.user.id, req.params.filmId);
+    if (!removed) return res.status(404).json({ error: 'Saved film was not found.' });
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
 const getDbData = () => {
   const dbPath = path.join(__dirname, 'data', 'db.json');
   const rawData = fs.readFileSync(dbPath, 'utf8');
   return JSON.parse(rawData);
 };
 
-app.get('/api/movies', async (req, res) => {
+app.get('/api/movies', requireAuth, async (req, res) => {
   try {
     const data = getDbData();
     res.json(data.movies);
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Failed to read database" });
   }
 });
 
-app.get('/api/timelines/:movieId', (req, res) => {
+app.get('/api/timelines/:movieId', requireAuth, (req, res) => {
   try {
     const data = getDbData();
     const movieId = req.params.movieId;
@@ -556,11 +736,26 @@ app.get('/api/timelines/:movieId', (req, res) => {
     } else {
       res.status(404).json({ error: "Timeline not found" });
     }
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Failed to read database" });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.use((error, _req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error.type === 'entity.too.large') return res.status(413).json({ error: 'Request body is too large.' });
+  if (error.type === 'entity.parse.failed') return res.status(400).json({ error: 'Request body must contain valid JSON.' });
+  if (error.message === 'Origin is not allowed by Helix API CORS policy.') return res.status(403).json({ error: 'This origin is not allowed to access the Helix API.' });
+  console.error('[api] request failed', error);
+  res.status(500).json({ error: 'The Helix API could not complete the request.' });
 });
+
+const HOST = process.env.HELIX_API_HOST || '127.0.0.1';
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === __filename;
+if (isMainModule) {
+  app.listen(PORT, HOST, () => {
+    console.log(`Helix API running at http://${HOST}:${PORT}`);
+  });
+}
+
+export { app };

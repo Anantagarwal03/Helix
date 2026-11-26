@@ -1,7 +1,9 @@
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { playClickSound } from '../utils/audio';
+import { useAuth } from '../auth/useAuth';
+import { loadSavedFilms, readCachedFilms, saveFilm as saveFilmToApi } from '../utils/libraryApi';
 
 import sixthSenseImg from '../assets/posters/sixth-sense.jpg';
 import donnieDarkoImg from '../assets/posters/donnie-darko.jpg';
@@ -231,11 +233,11 @@ const MovieCard = ({ movie }) => {
 
 export default function LibrarySection() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [movies, setMovies] = useState(() => {
-    const saved = readSavedValue('helix-added-films', []);
-    return [...libraryData, ...(Array.isArray(saved) ? saved : [])];
+    return [...libraryData, ...readCachedFilms(user.id)];
   });
   const [tmdbData, setTmdbData] = useState(() => readSavedValue('helix-tmdb-metadata', {}));
   const [syncing, setSyncing] = useState(false);
@@ -248,6 +250,19 @@ export default function LibrarySection() {
   const [selectedFilm, setSelectedFilm] = useState(null);
   const [storyDraft, setStoryDraft] = useState(null);
   const [storyGenerating, setStoryGenerating] = useState(false);
+  const [libraryLoading, setLibraryLoading] = useState(true);
+  const [savingFilm, setSavingFilm] = useState(false);
+  const [libraryApiError, setLibraryApiError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    loadSavedFilms(user.id).then(saved => {
+      if (active) setMovies([...libraryData, ...saved]);
+    }).catch(error => {
+      if (active) setLibraryApiError(`Saved maps are shown from this browser. The API library could not be loaded: ${error.message}`);
+    }).finally(() => { if (active) setLibraryLoading(false); });
+    return () => { active = false; };
+  }, [user.id]);
 
   const syncCurrentFilms = useCallback(async () => {
     setSyncing(true);
@@ -320,8 +335,9 @@ export default function LibrarySection() {
     }
   };
 
-  const addFilm = () => {
+  const addFilm = async () => {
     if (!storyDraft?.movie || !storyDraft?.storyGraph) return;
+    if (libraryLoading) return;
     const { movie: details, storyGraph } = storyDraft;
     const graphId = storyGraph.id;
     const existingGeneratedMap = movies.some(item => item.graphId === graphId);
@@ -349,16 +365,24 @@ export default function LibrarySection() {
       tmdb: details,
       storyGraph,
     };
-    const saved = [...movies.filter(item => item.id.startsWith('tmdb-') && item.id !== graphId), movie];
-    localStorage.setItem('helix-added-films', JSON.stringify(saved));
-    setMovies([...libraryData, ...saved]);
-    setShowAddFilm(false);
-    setSelectedFilm(null);
-    setStoryDraft(null);
-    setLookupQuery('');
-    setLookupResults([]);
+    setSavingFilm(true);
     setLookupError('');
-    navigate(`/graph?film=${encodeURIComponent(graphId)}`);
+    try {
+      await saveFilmToApi(movie);
+      const saved = await loadSavedFilms(user.id);
+      setMovies([...libraryData, ...saved]);
+      setLibraryApiError('');
+      setShowAddFilm(false);
+      setSelectedFilm(null);
+      setStoryDraft(null);
+      setLookupQuery('');
+      setLookupResults([]);
+      navigate(`/graph?film=${encodeURIComponent(graphId)}`);
+    } catch (error) {
+      setLookupError(`Could not save this story map: ${error.message}`);
+    } finally {
+      setSavingFilm(false);
+    }
   };
 
   const filteredMovies = useMemo(() => {
@@ -375,7 +399,6 @@ export default function LibrarySection() {
     });
   }, [activeFilter, searchQuery, movies, tmdbData]);
 
-  const activeColor = FILTER_COLORS[activeFilter] || C.cyan;
   const updatingStoryMap = Boolean(storyDraft && movies.some(movie => movie.graphId === storyDraft.storyGraph.id));
 
   return (
@@ -403,6 +426,7 @@ export default function LibrarySection() {
                 {movies.reduce((a, m) => a + m.events, 0)} events
               </span>
             </div>
+            {libraryApiError && <p role="status" className="mt-2 max-w-xl text-[10px] font-mono text-amber-300">{libraryApiError}</p>}
           </div>
           <div className="flex flex-col gap-3 w-full max-w-lg">
           <button type="button" onClick={syncCurrentFilms} disabled={syncing} className="self-end px-3 py-2 rounded-md font-mono text-[10px] uppercase tracking-wider disabled:opacity-50" style={{ color: C.cyan, border: `1px solid ${C.cyan}50`, background: `${C.cyan}0c` }}>{syncing ? 'Syncing current films…' : 'Sync ratings & details'}</button>
@@ -526,7 +550,7 @@ export default function LibrarySection() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => { setStoryDraft(null); generateStoryMap(); }} disabled={storyGenerating} className="rounded-md py-2 text-xs font-semibold border border-white/10 text-slate-300 disabled:opacity-50">Regenerate</button>
-                <button type="button" onClick={addFilm} className="rounded-md py-2 text-xs font-bold" style={{ background: C.cyan, color: '#030014' }}>{updatingStoryMap ? 'Approve & replace story map' : 'Approve & add to library'}</button>
+                <button type="button" onClick={addFilm} disabled={savingFilm || libraryLoading} className="rounded-md py-2 text-xs font-bold disabled:opacity-50" style={{ background: C.cyan, color: '#030014' }}>{libraryLoading ? 'Loading library…' : savingFilm ? 'Saving…' : updatingStoryMap ? 'Approve & replace story map' : 'Approve & add to library'}</button>
               </div>
               <p className="text-[9px] text-slate-500">AI-generated maps can contain mistakes. Review the source links and plot details before approval.</p>
             </div>}

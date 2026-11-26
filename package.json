@@ -3,9 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=25.7.0"
+  },
   "scripts": {
     "dev": "vite",
     "dev:server": "node server/index.js",
+    "test": "npm --prefix server test",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
