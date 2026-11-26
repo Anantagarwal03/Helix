@@ -50,9 +50,16 @@ test('authentication protects APIs and isolates saved films between accounts', a
   });
   assert.equal(malformedEmail.response.status, 400);
 
+  const shortPassword = await request('/api/auth/register', {
+    method: 'POST',
+    body: { email: 'short.password@gmail.com', password: '123456789' },
+  });
+  assert.equal(shortPassword.response.status, 400);
+  assert.match(shortPassword.data.error, /at least 10 characters/);
+
   const registration = await request('/api/auth/register', {
     method: 'POST',
-    body: { email: 'Owner@Gmail.com', password: 'correct horse battery staple' },
+    body: { email: 'Owner@Gmail.com', password: '1234567890' },
   });
   assert.equal(registration.response.status, 201);
   assert.match(registration.setCookie, /HttpOnly/);
@@ -68,13 +75,13 @@ test('authentication protects APIs and isolates saved films between accounts', a
 
   const duplicateAccount = await request('/api/auth/register', {
     method: 'POST',
-    body: { email: 'owner@gmail.com', password: 'correct horse battery staple' },
+    body: { email: 'owner@gmail.com', password: '1234567890' },
   });
   assert.equal(duplicateAccount.response.status, 409);
 
   const login = await request('/api/auth/login', {
     method: 'POST',
-    body: { email: 'OWNER@gmail.com', password: 'correct horse battery staple' },
+    body: { email: 'OWNER@gmail.com', password: '1234567890' },
   });
   assert.equal(login.response.status, 200);
   const loginCookie = login.setCookie.split(';')[0];

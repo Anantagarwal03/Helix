@@ -26,7 +26,7 @@ export function validateCredentials(email, password) {
     && !localPart.includes('..');
   if (!localPartIsValid || !domain || extraParts.length || email.length > 254) return 'Enter a valid email address.';
   if (!allowedEmailDomains.has(domain.toLowerCase())) return 'Use an email address from Gmail, Yahoo, Outlook, Hotmail, Live, Rediffmail, iCloud, or Proton.';
-  if (typeof password !== 'string' || password.length < 12 || Buffer.byteLength(password, 'utf8') > 128) return 'Password must be at least 12 characters and no more than 128 bytes.';
+  if (typeof password !== 'string' || password.length < 10 || Buffer.byteLength(password, 'utf8') > 128) return 'Password must be at least 10 characters and no more than 128 bytes.';
   return null;
 }
 

@@ -11,7 +11,7 @@ Helix maps films as spoiler-aware story graphs. TMDB supplies movie metadata; Ta
 
 The frontend uses the API server at `http://127.0.0.1:5001` through the Vite `/api` proxy. Configure `HELIX_API_HOST`, `HELIX_API_PORT`, `HELIX_DB_PATH`, and `HELIX_CORS_ORIGINS` in the server environment when needed. The server binds to loopback by default and allows the local Vite origins listed in `.env.example`.
 
-Open `/register` to create the first account using a Gmail, Yahoo, Outlook, Hotmail, Live, Rediffmail, iCloud, or Proton address. The server checks the address format and provider domain; it does not send a verification email. Passwords must be at least 12 characters. Sign-in creates a seven-day, HttpOnly, SameSite session cookie; cookies are marked Secure in production. Use `/login` for later sessions. Each account has a private library. Existing server JSON maps are assigned to the first account when it is created, and browser-local maps are imported during registration.
+Open `/register` to create the first account using a Gmail, Yahoo, Outlook, Hotmail, Live, Rediffmail, iCloud, or Proton address. The server checks the address format and provider domain; it does not send a verification email. Passwords must be at least 10 characters. Sign-in creates a seven-day, HttpOnly, SameSite session cookie; cookies are marked Secure in production. Use `/login` for later sessions. Each account has a private library. Existing server JSON maps are assigned to the first account when it is created, and browser-local maps are imported during registration.
 
 ## Drafting a story map
 

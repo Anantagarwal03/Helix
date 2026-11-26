@@ -56,13 +56,13 @@ export default function AuthView({ mode }) {
               type="password"
               autoComplete={registering ? 'new-password' : 'current-password'}
               required
-              minLength={registering ? 12 : 1}
+              minLength={registering ? 10 : 1}
               maxLength={128}
               value={password}
               onChange={event => setPassword(event.target.value)}
               className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/60"
             />
-            {registering && <span className="mt-1 block text-[11px] text-slate-500">Use at least 12 characters.</span>}
+            {registering && <span className="mt-1 block text-[11px] text-slate-500">Use at least 10 characters.</span>}
           </label>
           {error && <p role="alert" className="rounded-lg border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p>}
           <button
