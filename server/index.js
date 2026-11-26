@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { createLibraryStore } from './library-store.js';
 import { validateFilm } from './library-validation.js';
+import { STORY_MAP_SCHEMA, requestValidatedStoryDraft } from './story-draft.js';
 import { createSessionToken, hashPassword, hashSessionToken, normalizeEmail, SESSION_DURATION_MS, validateCredentials, verifyPassword } from './auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -153,51 +154,6 @@ app.post('/api/auth/logout', (req, res) => {
   res.status(204).end();
 });
 
-const STORY_MAP_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    summary: { type: 'string' },
-    twistType: { type: 'string' },
-    nodes: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          label: { type: 'string' },
-          graphLabel: { type: 'string' },
-          type: { type: 'string', enum: ['character', 'event', 'twist'] },
-          spoilerLevel: { type: 'integer', enum: [0, 1, 2] },
-          timelineOrder: { type: 'integer' },
-          timelineStage: { type: 'string' },
-          revealText: { type: 'string' },
-          revealSubtext: { type: 'string' },
-          revealClassification: { type: 'string' },
-          sourceIndexes: { type: 'array', items: { type: 'integer' } },
-        },
-        required: ['label', 'graphLabel', 'type', 'spoilerLevel', 'timelineOrder', 'timelineStage', 'revealText', 'revealSubtext', 'revealClassification', 'sourceIndexes'],
-      },
-    },
-    links: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          sourceIndex: { type: 'integer' },
-          targetIndex: { type: 'integer' },
-          relationship: { type: 'string' },
-          explanation: { type: 'string' },
-          spoilerLevel: { type: 'integer', enum: [0, 1, 2] },
-        },
-        required: ['sourceIndex', 'targetIndex', 'relationship', 'explanation', 'spoilerLevel'],
-      },
-    },
-  },
-  required: ['summary', 'twistType', 'nodes', 'links'],
-};
-
 const generationRequestsByIp = new Map();
 const STORY_MAP_RATE_WINDOW_MS = 60 * 60 * 1000;
 const STORY_MAP_RATE_LIMIT = 5;
@@ -309,15 +265,14 @@ app.post('/api/generate-story-map', requireAuth, async (req, res) => {
       'Use spoilerLevel 0 for facts safe before watching, 1 for partial plot information, and 2 for explicit ending/reveal details. Level-0 revealText and revealSubtext must not reveal later plot turns.',
       'Write graphLabel as a short map label (at most 22 characters). Write revealSubtext as a useful, specific explanation, not generic filler.',
       'Create one meaningful directed link per story node, plus a few important cross-links, so the map shows motivations, causes, clues, and consequences. Every node must connect into the main story. sourceIndex and targetIndex are zero-based positions in the nodes array. Keep each explanation to one concise sentence. Set link spoilerLevel high enough to hide its explanation until it is safe.',
-      'Return only data matching the provided JSON schema. Do not include markdown or prose outside the structured result. If the supplied sources do not support a claim, leave it out.',
+      `Return one JSON object matching this exact structure. All listed fields are required; do not add fields: ${JSON.stringify(STORY_MAP_SCHEMA)}`,
+      'Do not include markdown or text before or after the JSON object. If the supplied sources do not support a claim, leave it out.',
     ].join(' ');
 
     activeProvider = 'Groq';
-    const groqResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'openai/gpt-oss-120b',
-      messages: [
-        { role: 'system', content: instructions },
-        { role: 'user', content: JSON.stringify({
+    const groqMessages = [
+      { role: 'system', content: instructions },
+      { role: 'user', content: JSON.stringify({
           movie: {
             title: details.title,
             originalTitle: details.original_title,
@@ -327,72 +282,29 @@ app.post('/api/generate-story-map', requireAuth, async (req, res) => {
             overview: details.overview || '',
           },
           researchSources: researchSources.map((source, index) => ({ index, ...source })),
-        }) },
-      ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'helix_movie_story_map',
-          strict: true,
-          schema: STORY_MAP_SCHEMA,
-        },
-      },
+      }) },
+    ];
+    const requestGroqDraft = (responseFormat, messages = groqMessages) => axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'openai/gpt-oss-120b',
+      messages,
+      response_format: responseFormat,
       reasoning_effort: 'low',
-      max_completion_tokens: 4500,
-      temperature: 0.2,
+      max_completion_tokens: 6500,
+      temperature: 0.4,
       stream: false,
     }, {
       headers: { Authorization: `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
       timeout: 120000,
     });
 
-    const outputText = groqResponse.data.choices?.[0]?.message?.content;
-    if (!outputText) return res.status(502).json({ error: 'The research service returned no story-map draft. Try again.' });
-
-    let draft;
-    try {
-      draft = JSON.parse(outputText);
-    } catch {
-      return res.status(502).json({ error: 'The research service returned an unreadable draft. Try again.' });
-    }
-
-    if (!Array.isArray(draft.nodes) || draft.nodes.length < 10 || draft.nodes.length > 14) {
-      const count = Array.isArray(draft.nodes) ? draft.nodes.length : 0;
-      return res.status(502).json({ error: `Groq returned ${count} story beats; this map needs at least 10. Try generating it again.` });
-    }
-    if (!Array.isArray(draft.links) || draft.links.length < draft.nodes.length - 1 || draft.links.length > 28) {
-      const count = Array.isArray(draft.links) ? draft.links.length : 0;
-      return res.status(502).json({ error: `The draft has ${count} story connections for ${draft.nodes.length} beats; it needs at least ${draft.nodes.length - 1} connected links. Try again.` });
-    }
-
-    const typeCounts = draft.nodes.reduce((counts, node) => {
-      counts[node.type] = (counts[node.type] || 0) + 1;
-      return counts;
-    }, {});
-    if ((typeCounts.character || 0) < 2 || (typeCounts.event || 0) < 6 || (typeCounts.twist || 0) < 1) {
-      return res.status(502).json({ error: `The draft needs more story detail: it returned ${typeCounts.character || 0} characters, ${typeCounts.event || 0} events, and ${typeCounts.twist || 0} reveals; it needs at least 2, 6, and 1 respectively.` });
-    }
-
-    const invalidNode = !draft.summary?.trim() || !draft.twistType?.trim() || draft.nodes.some(node => (
-      typeof node.label !== 'string' || !node.label.trim() || node.label.length > 90
-      || typeof node.graphLabel !== 'string' || !node.graphLabel.trim() || node.graphLabel.length > 22
-      || !['character', 'event', 'twist'].includes(node.type)
-      || ![0, 1, 2].includes(node.spoilerLevel)
-      || !Number.isSafeInteger(node.timelineOrder) || node.timelineOrder < 1
-      || !node.timelineStage?.trim() || !node.revealText?.trim() || !node.revealSubtext?.trim()
-      || !node.revealClassification?.trim() || !Array.isArray(node.sourceIndexes)
-      || node.sourceIndexes.length < 1 || node.sourceIndexes.some(index => !Number.isSafeInteger(index) || index < 0 || index >= researchSources.length)
-    ));
-    const invalidIndexes = draft.links.some(link => (
-      !Number.isSafeInteger(link.sourceIndex) || !Number.isSafeInteger(link.targetIndex)
-      || link.sourceIndex < 0 || link.targetIndex < 0
-      || link.sourceIndex >= draft.nodes.length || link.targetIndex >= draft.nodes.length
-      || link.sourceIndex === link.targetIndex
-      || !link.relationship?.trim() || !link.explanation?.trim()
-      || ![0, 1, 2].includes(link.spoilerLevel)
-    ));
-    if (invalidNode || invalidIndexes) {
-      return res.status(502).json({ error: 'The draft did not meet the story-map format checks. Try again.' });
+    const { draft, error: draftError } = await requestValidatedStoryDraft({
+      request: requestGroqDraft,
+      messages: groqMessages,
+      sourceCount: researchSources.length,
+      onSchemaFallback: () => console.warn('[story-map] Groq rejected strict JSON schema mode; retrying in JSON mode.'),
+    });
+    if (draftError) {
+      return res.status(502).json({ error: `The story draft did not pass validation after automatic retries: ${draftError}` });
     }
 
     const generatedNodes = draft.nodes.map((node, index) => {
@@ -521,7 +433,7 @@ app.post('/api/generate-story-map', requireAuth, async (req, res) => {
       return res.status(429).json({ error: 'Groq’s free model quota or rate limit was reached. Wait for the limit to reset, then try again.' });
     }
     if (status === 400 && activeProvider === 'Groq') {
-      return res.status(502).json({ error: 'Groq could not format the story-map draft. Try again; if it repeats, the draft request may be too large for the selected model.' });
+      return res.status(502).json({ error: `Groq rejected the story-map request after the automatic format fallback: ${providerMessage}` });
     }
     if (status === 401 || status === 403) {
       return res.status(502).json({ error: 'The movie or research provider rejected the request. Check the API keys in .env.' });
