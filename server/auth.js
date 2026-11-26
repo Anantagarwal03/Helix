@@ -4,13 +4,28 @@ import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHash } fr
 
 const scrypt = promisify(scryptCallback);
 export const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+const allowedEmailDomains = new Set([
+  'gmail.com', 'googlemail.com',
+  'yahoo.com', 'yahoo.in', 'yahoo.co.in', 'yahoo.co.uk', 'yahoo.ca', 'yahoo.com.au',
+  'outlook.com', 'outlook.in', 'outlook.co.uk',
+  'hotmail.com', 'hotmail.co.uk', 'live.com', 'live.in', 'msn.com',
+  'rediffmail.com', 'icloud.com', 'me.com', 'proton.me', 'protonmail.com',
+]);
 
 export function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
 export function validateCredentials(email, password) {
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return 'Enter a valid email address.';
+  const [localPart, domain, ...extraParts] = email.split('@');
+  const localPartIsValid = localPart
+    && localPart.length <= 64
+    && /^[a-z0-9!#$%&'*+/=?^_`{|}~.-]+$/i.test(localPart)
+    && !localPart.startsWith('.')
+    && !localPart.endsWith('.')
+    && !localPart.includes('..');
+  if (!localPartIsValid || !domain || extraParts.length || email.length > 254) return 'Enter a valid email address.';
+  if (!allowedEmailDomains.has(domain.toLowerCase())) return 'Use an email address from Gmail, Yahoo, Outlook, Hotmail, Live, Rediffmail, iCloud, or Proton.';
   if (typeof password !== 'string' || password.length < 12 || Buffer.byteLength(password, 'utf8') > 128) return 'Password must be at least 12 characters and no more than 128 bytes.';
   return null;
 }

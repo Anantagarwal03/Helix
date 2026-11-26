@@ -37,9 +37,22 @@ test('authentication protects APIs and isolates saved films between accounts', a
   const unauthenticated = await request('/api/library');
   assert.equal(unauthenticated.response.status, 401);
 
+  const unsupportedEmail = await request('/api/auth/register', {
+    method: 'POST',
+    body: { email: 'owner@abc.com', password: 'correct horse battery staple' },
+  });
+  assert.equal(unsupportedEmail.response.status, 400);
+  assert.match(unsupportedEmail.data.error, /Gmail, Yahoo, Outlook/);
+
+  const malformedEmail = await request('/api/auth/register', {
+    method: 'POST',
+    body: { email: 'owner..name@gmail.com', password: 'correct horse battery staple' },
+  });
+  assert.equal(malformedEmail.response.status, 400);
+
   const registration = await request('/api/auth/register', {
     method: 'POST',
-    body: { email: 'Owner@Example.test', password: 'correct horse battery staple' },
+    body: { email: 'Owner@Gmail.com', password: 'correct horse battery staple' },
   });
   assert.equal(registration.response.status, 201);
   assert.match(registration.setCookie, /HttpOnly/);
@@ -49,23 +62,23 @@ test('authentication protects APIs and isolates saved films between accounts', a
 
   const invalidPassword = await request('/api/auth/login', {
     method: 'POST',
-    body: { email: 'owner@example.test', password: 'wrong password' },
+    body: { email: 'owner@gmail.com', password: 'wrong password' },
   });
   assert.equal(invalidPassword.response.status, 401);
 
   const duplicateAccount = await request('/api/auth/register', {
     method: 'POST',
-    body: { email: 'owner@example.test', password: 'correct horse battery staple' },
+    body: { email: 'owner@gmail.com', password: 'correct horse battery staple' },
   });
   assert.equal(duplicateAccount.response.status, 409);
 
   const login = await request('/api/auth/login', {
     method: 'POST',
-    body: { email: 'OWNER@example.test', password: 'correct horse battery staple' },
+    body: { email: 'OWNER@gmail.com', password: 'correct horse battery staple' },
   });
   assert.equal(login.response.status, 200);
   const loginCookie = login.setCookie.split(';')[0];
-  assert.equal((await request('/api/auth/session', { cookie: loginCookie })).data.user.email, 'owner@example.test');
+  assert.equal((await request('/api/auth/session', { cookie: loginCookie })).data.user.email, 'owner@gmail.com');
 
   const film = {
     id: 'tmdb-607', graphId: 'tmdb-607', title: 'Private Film', year: '2025', director: 'Director', genre: ['Mystery'], twistTag: 'Reveal',
@@ -84,7 +97,7 @@ test('authentication protects APIs and isolates saved films between accounts', a
 
   const secondRegistration = await request('/api/auth/register', {
     method: 'POST',
-    body: { email: 'other@example.test', password: 'another secure password' },
+    body: { email: 'other@yahoo.com', password: 'another secure password' },
   });
   assert.equal(secondRegistration.response.status, 201);
   const secondCookie = secondRegistration.setCookie.split(';')[0];

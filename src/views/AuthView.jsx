@@ -48,6 +48,7 @@ export default function AuthView({ mode }) {
               onChange={event => setEmail(event.target.value)}
               className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/60"
             />
+            {registering && <span className="mt-1 block text-[11px] text-slate-500">Use Gmail, Yahoo, Outlook, Hotmail, Rediffmail, iCloud, or Proton.</span>}
           </label>
           <label className="block text-xs text-slate-300">
             Password
