@@ -165,6 +165,61 @@ export const MOVIES = [
     genres: ['Crime', 'Mystery', 'Thriller'], twistType: 'Seven Deadly Sins / Forced Final Choice',
     accentColor: '#f87171', twistScore: '—', nodes: 20, events: 15,
   },
+  {
+    id: 'knives-out', title: 'Knives Out', director: 'Rian Johnson', year: 2019,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Mystery', 'Crime'],
+    twistType: 'Murder Mystery / Inherited Motive', accentColor: '#fbbf24', twistScore: '—', nodes: 14, events: 9,
+  },
+  {
+    id: 'glass-onion', title: 'Glass Onion: A Knives Out Mystery', director: 'Rian Johnson', year: 2022,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Mystery', 'Crime', 'Comedy'],
+    twistType: 'Murder Mystery / Hidden Evidence', accentColor: '#38bdf8', twistScore: '—', nodes: 14, events: 8,
+  },
+  {
+    id: 'wake-up-dead-man', title: 'Wake Up Dead Man: A Knives Out Mystery', director: 'Rian Johnson', year: 2025,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Mystery', 'Crime', 'Drama'],
+    twistType: 'Impossible Crime / Faith and Greed', accentColor: '#c4b5fd', twistScore: '—', nodes: 20, events: 12,
+  },
+  {
+    id: 'american-psycho', title: 'American Psycho', director: 'Mary Harron', year: 2000,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Thriller', 'Drama'],
+    twistType: 'Unreliable Reality / Satirical Identity', accentColor: '#f87171', twistScore: '—', nodes: 14, events: 9,
+  },
+  {
+    id: 'prisoners', title: 'Prisoners', director: 'Denis Villeneuve', year: 2013,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Mystery', 'Crime', 'Drama'],
+    twistType: 'Missing Persons / Moral Descent', accentColor: '#94a3b8', twistScore: '—', nodes: 14, events: 8,
+  },
+  {
+    id: 'dont-look-up', title: 'Don’t Look Up', director: 'Adam McKay', year: 2021,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Comedy', 'Science Fiction'],
+    twistType: 'Satire / Institutional Denial', accentColor: '#fb923c', twistScore: '—', nodes: 14, events: 9,
+  },
+  {
+    id: 'truman-show', title: 'The Truman Show', director: 'Peter Weir', year: 1998,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Drama', 'Science Fiction'],
+    twistType: 'Constructed Reality / Escape', accentColor: '#2dd4bf', twistScore: '—', nodes: 14, events: 9,
+  },
+  {
+    id: 'ready-player-one', title: 'Ready Player One', director: 'Steven Spielberg', year: 2018,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Science Fiction', 'Adventure'],
+    twistType: 'Virtual Quest / Creator’s Test', accentColor: '#a78bfa', twistScore: '—', nodes: 14, events: 9,
+  },
+  {
+    id: 'dunkirk', title: 'Dunkirk', director: 'Christopher Nolan', year: 2017,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['War', 'Drama'],
+    twistType: 'Intercut Timelines / Survival', accentColor: '#60a5fa', twistScore: '—', nodes: 14, events: 9,
+  },
+  {
+    id: 'girl-with-dragon-tattoo', title: 'The Girl with the Dragon Tattoo', director: 'David Fincher', year: 2011,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Crime', 'Mystery', 'Thriller'],
+    twistType: 'Cold Case / Family Conspiracy', accentColor: '#f472b6', twistScore: '—', nodes: 14, events: 8,
+  },
+  {
+    id: 'cabin-in-the-woods', title: 'The Cabin in the Woods', director: 'Drew Goddard', year: 2012,
+    complexity: 'High', poster: null, posterUrl: null, genres: ['Horror', 'Comedy'],
+    twistType: 'Meta-Horror / Ritual System', accentColor: '#4ade80', twistScore: '—', nodes: 14, events: 9,
+  },
 ];
 
 export const STATS = [

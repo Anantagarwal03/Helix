@@ -430,30 +430,30 @@ const GraphSection = () => {
         </label>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Spoilers</span>
+      <div aria-label="Story graph controls" className="flex flex-wrap items-center gap-x-2 gap-y-2 flex-shrink-0 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-3 md:px-4">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">Spoiler level</span>
         {SPOILER_OPTIONS.map(option => {
           const active = spoilerLevel === option.level;
           return <button key={option.level} type="button" aria-pressed={active} onClick={() => { setSpoilerLevel(option.level); setSelectedNode(null); setSelectedConnectionId(null); }} className="rounded-full px-3 py-1.5 text-[10px] font-mono border transition-colors" style={{ color: active ? '#fbbf24' : '#64748b', borderColor: active ? 'rgba(251,191,36,.45)' : 'rgba(255,255,255,.08)', background: active ? 'rgba(251,191,36,.08)' : 'transparent' }}>{option.label}</button>;
         })}
-        <span className="w-px h-5 bg-white/10 mx-1" />
-        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">Focus</span>
+        <span className="hidden md:block w-px h-5 bg-white/10 mx-1" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">Show</span>
         {filters.map(([type, label, color]) => {
           const active = visibleTypes.includes(type);
           return <button key={type} type="button" aria-pressed={active} onClick={() => toggleFilter(type)} className="rounded-full px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider border transition-colors" style={{ color: active ? color : '#64748b', borderColor: active ? `${color}55` : 'rgba(255,255,255,.08)', background: active ? `${color}10` : 'transparent' }}>{label}</button>;
         })}
-        <span className="w-px h-5 bg-white/10 mx-1" />
-        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mr-1">View</span>
+        <span className="hidden md:block w-px h-5 bg-white/10 mx-1" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">Layout</span>
         {[['map', 'Map'], ['timeline', 'Timeline']].map(([mode, label]) => {
           const active = viewMode === mode;
           return <button key={mode} type="button" aria-pressed={active} onClick={() => setViewMode(mode)}
             className="rounded-full px-3 py-1.5 text-[10px] font-mono border transition-colors"
             style={{ color: active ? '#67e8f9' : '#64748b', borderColor: active ? 'rgba(103,232,249,.4)' : 'rgba(255,255,255,.08)', background: active ? 'rgba(103,232,249,.08)' : 'transparent' }}>{label}</button>;
         })}
-        <span className="ml-auto text-[10px] font-mono text-slate-500">{graphData.nodes.length} nodes · {graphData.links.length} connections</span>
+        <span className="ml-auto text-xs text-slate-400 tabular-nums">{graphData.nodes.length} nodes <span className="text-slate-600">·</span> {graphData.links.length} connections</span>
       </div>
 
-      <p className="-mt-2 text-[10px] font-mono text-slate-500">{viewMode === 'map' ? 'Map labels are shortened for clarity. Hover a node for its full name; hover or click a connection for its explanation.' : 'Beats follow story order; character entries mark where their story threads enter the timeline.'} {spoilerLevel < 2 && 'The ending reveal stays hidden until Full story is selected.'}</p>
+      <p className="text-xs text-slate-400">{viewMode === 'map' ? 'Select a node to inspect its story context. Select a connection to read why the beats are linked.' : 'Beats follow story order; character entries mark where their story threads enter the timeline.'} {spoilerLevel < 2 && 'Full ending details appear when Full story is selected.'}</p>
 
       {viewMode === 'map' ? <div data-reveal className="relative rounded-xl overflow-hidden flex-shrink-0 h-[48vh] min-h-[340px] max-h-[620px]" style={{ background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 rounded-lg px-3 py-2 bg-[#030014]/80 border border-white/10">

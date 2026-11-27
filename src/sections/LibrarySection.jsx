@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { playClickSound } from '../utils/audio';
 import { useAuth } from '../auth/useAuth';
 import { loadSavedFilms, readCachedFilms, saveFilm as saveFilmToApi } from '../utils/libraryApi';
 import { MOVIES } from '../data/movies';
@@ -44,31 +43,6 @@ const libraryData = [
   }),
 ];
 const withoutCuratedDuplicates = saved => saved.filter(movie => !STORY_GRAPHS[movie.graphId || movie.id]);
-
-const useTilt = (maxTilt = 9) => {
-  const ref = useRef(null);
-  const [tiltStyle, setTiltStyle] = useState({
-    transform: 'perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)',
-    transition: 'transform 0.55s cubic-bezier(0.25,0.46,0.45,0.94)',
-  });
-  const onMouseMove = useCallback((e) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    setTiltStyle({
-      transform: `perspective(900px) rotateX(${((0.5 - y) * maxTilt * 2).toFixed(2)}deg) rotateY(${((x - 0.5) * maxTilt * 2).toFixed(2)}deg) scale3d(1.02,1.02,1.02)`,
-      transition: 'transform 0.08s ease',
-    });
-  }, [maxTilt]);
-  const onMouseLeave = useCallback(() => {
-    setTiltStyle({
-      transform: 'perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)',
-      transition: 'transform 0.55s cubic-bezier(0.25,0.46,0.45,0.94)',
-    });
-  }, []);
-  return { ref, tiltStyle, onMouseMove, onMouseLeave };
-};
 
 const TerminalSearch = ({ value, onChange, resultCount, total }) => {
   const [focused, setFocused] = useState(false);
@@ -127,25 +101,20 @@ const TerminalSearch = ({ value, onChange, resultCount, total }) => {
 };
 
 const MovieCard = ({ movie }) => {
-  const { ref, tiltStyle, onMouseMove, onMouseLeave } = useTilt(9);
   const [hovered, setHovered] = useState(false);
 
   return (
     <div
-      ref={ref}
-      onMouseMove={onMouseMove}
-      onMouseLeave={() => { onMouseLeave(); setHovered(false); }}
+      onMouseLeave={() => setHovered(false)}
       onMouseEnter={() => setHovered(true)}
-      style={{ ...tiltStyle, transformStyle: 'preserve-3d', willChange: 'transform' }}
-      className="rounded-xl overflow-hidden flex flex-col p-3 relative group shadow-2xl backdrop-blur-md transition-all duration-200"
-      onMouseEnterCapture={() => setHovered(true)}
+      className="rounded-xl overflow-hidden flex flex-col p-3 relative group transition-colors duration-200"
+      style={{ background: 'rgba(14,13,24,0.94)', border: `1px solid ${hovered ? `${movie.color}55` : 'rgba(255,255,255,0.10)'}` }}
     >
       <div
         className="absolute inset-0 rounded-xl pointer-events-none transition-all duration-300"
         style={{
-          background: 'rgba(8,4,28,0.7)',
-          border: hovered ? `1px solid ${movie.color}45` : '1px solid rgba(255,255,255,0.06)',
-          boxShadow: hovered ? `inset 0 0 30px ${movie.color}08` : 'none',
+          background: 'transparent',
+          border: 'none',
         }}
       />
 
@@ -155,21 +124,14 @@ const MovieCard = ({ movie }) => {
               src={movie.tmdb?.posterUrl || movie.image}
               alt={movie.title}
               onError={event => { event.currentTarget.style.display = 'none'; }}
-              className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500 sepia-[.12]"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             />
-          : <div className="w-full h-full flex items-center justify-center p-5 text-center font-mono text-xs tracking-[0.25em] uppercase" style={{ background: `radial-gradient(ellipse at 50% 30%, ${movie.color}24, rgba(8,4,28,.95) 72%)`, color: `${movie.color}bb` }}>{movie.title}</div>}
+          : <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center" style={{ background: 'linear-gradient(145deg, #20202b, #111118)', color: 'rgba(255,255,255,.9)' }}><span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">Helix film archive</span><span className="text-lg font-semibold leading-snug">{movie.title}</span><span className="text-xs text-slate-400">{movie.year}</span></div>}
         <div className="absolute inset-0 bg-gradient-to-t from-[#08041c] via-transparent to-transparent opacity-90" />
 
         <div
-          className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-400 pointer-events-none rounded-lg"
-          style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.13) 2px, rgba(0,0,0,0.13) 3px)' }}
-        />
-        <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-lg"
-          style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%)' }} />
-
-        <div
           className="absolute top-2 right-2 z-30 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1"
-          style={{ background: `${C.amber}14`, border: `1px solid ${C.amber}30`, color: C.amber }}
+          style={{ background: 'rgba(8,8,12,.88)', border: '1px solid rgba(255,255,255,.18)', color: '#fcd34d' }}
         >
           {Number.isFinite(Number(movie.tmdb?.rating)) && Number(movie.tmdb.rating) > 0
             ? `TMDB ${Number(movie.tmdb.rating).toFixed(1)}`
@@ -179,7 +141,7 @@ const MovieCard = ({ movie }) => {
         <div className="absolute bottom-2 left-2 z-30 flex flex-wrap gap-1 max-w-[90%]">
           {(movie.tmdb?.genres?.length ? movie.tmdb.genres : movie.genre).map((g, i) => (
             <span key={i} className="text-[9px] backdrop-blur-sm px-1.5 py-0.5 rounded tracking-wide"
-              style={{ background: 'rgba(0,0,0,0.55)', color: 'rgba(255,255,255,0.4)' }}>
+              style={{ background: 'rgba(8,8,12,0.82)', color: 'rgba(255,255,255,0.82)' }}>
               {g}
             </span>
           ))}
@@ -188,20 +150,20 @@ const MovieCard = ({ movie }) => {
 
       <div className="mt-4 flex flex-col flex-1 relative z-10">
         <h2
-          className="text-[13px] font-bold uppercase tracking-[-0.01em] leading-tight truncate transition-colors duration-200"
-          style={{ color: hovered ? movie.color : 'rgba(255,255,255,0.88)' }}
+          className="text-sm font-semibold leading-snug line-clamp-2 transition-colors duration-200"
+          style={{ color: hovered ? movie.color : 'rgba(255,255,255,0.96)' }}
         >
           {movie.title}
         </h2>
-        <span className="text-[10px] font-mono tracking-wide mt-1 leading-none" style={{ color: 'rgba(255,255,255,0.28)' }}>
+        <span className="text-xs tracking-wide mt-1.5 leading-snug" style={{ color: 'rgba(203,213,225,0.78)' }}>
           {movie.year} · {movie.tmdb?.director || movie.director}
         </span>
-        {movie.tmdb && <span className="text-[9px] text-slate-500 mt-1">{movie.tmdb.voteCount.toLocaleString()} TMDB votes · <a href={movie.tmdb.sourceUrl} target="_blank" rel="noreferrer" className="underline">source</a></span>}
-        {movie.tmdb?.overview && <p className="text-[10px] text-slate-500 leading-relaxed mt-2 line-clamp-3">{movie.tmdb.overview}</p>}
+        {movie.tmdb && <span className="text-[10px] text-slate-400 mt-1">{movie.tmdb.voteCount.toLocaleString()} TMDB votes · <a href={movie.tmdb.sourceUrl} target="_blank" rel="noreferrer" className="underline">source</a></span>}
+        {movie.tmdb?.overview && <p className="text-xs text-slate-300/80 leading-relaxed mt-2 line-clamp-3">{movie.tmdb.overview}</p>}
 
         <div className="mt-3">
           <span
-            className="inline-block text-[9px] font-mono px-2 py-0.5 rounded-sm border uppercase tracking-[0.08em]"
+            className="inline-block text-[9px] font-medium px-2 py-1 rounded border uppercase tracking-[0.06em]"
             style={{ borderColor: `${movie.color}35`, color: movie.color, backgroundColor: `${movie.color}08` }}
           >
             {movie.twistTag}
@@ -235,7 +197,6 @@ const MovieCard = ({ movie }) => {
 export default function LibrarySection() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [movies, setMovies] = useState(() => {
     return [...libraryData, ...withoutCuratedDuplicates(readCachedFilms(user.id))];
@@ -392,21 +353,15 @@ export default function LibrarySection() {
   const filteredMovies = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return movies.map(movie => ({ ...movie, tmdb: tmdbData[movie.id] || movie.tmdb })).filter(m => {
-      const matchesFilter = activeFilter === 'All' || m.twistTag === activeFilter;
       const matchesSearch = !q || (
         m.title.toLowerCase().includes(q) ||
         m.director.toLowerCase().includes(q) ||
         m.twistTag.toLowerCase().includes(q) ||
         m.genre.some(g => g.toLowerCase().includes(q))
       );
-      return matchesFilter && matchesSearch;
+      return matchesSearch;
     }).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
-  }, [activeFilter, searchQuery, movies, tmdbData]);
-  const storyFilters = useMemo(() => [
-    'All',
-    ...[...new Set(movies.map(movie => movie.twistTag).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
-  ], [movies]);
+  }, [searchQuery, movies, tmdbData]);
 
   const updatingStoryMap = Boolean(storyDraft && movies.some(movie => movie.graphId === storyDraft.storyGraph.id));
 
@@ -450,22 +405,6 @@ export default function LibrarySection() {
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <label className="flex items-center gap-3 rounded-lg px-3 py-2.5 border border-white/[0.08] bg-black/30">
-            <span className="text-[9px] font-mono uppercase tracking-[0.16em] text-slate-500">Story type</span>
-            <select
-              value={activeFilter}
-              onChange={event => { playClickSound(); setActiveFilter(event.target.value); }}
-              className="max-w-[55vw] sm:max-w-xs bg-transparent text-[10px] font-mono uppercase tracking-wider text-cyan-300 focus:outline-none"
-              style={{ colorScheme: 'dark' }}
-              aria-label="Filter films by story type"
-            >
-              {storyFilters.map(filter => (
-                <option key={filter} value={filter} className="bg-[#090914] text-slate-200">{filter}</option>
-              ))}
-            </select>
-          </label>
-        </div>
       </div>
 
       <AnimatePresence mode="popLayout">
@@ -481,13 +420,13 @@ export default function LibrarySection() {
               /&gt;_ no records matched query
             </span>
             <p className="text-[10px] font-mono" style={{ color: 'rgba(255,255,255,0.18)' }}>
-              Try adjusting the search or filter.
+              Try another title, director, genre, or story theme.
             </p>
           </motion.div>
         ) : (
           <motion.div
             key="grid"
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-5"
             layout
           >
             <AnimatePresence mode="popLayout">
