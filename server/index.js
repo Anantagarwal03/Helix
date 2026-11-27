@@ -154,6 +154,26 @@ app.post('/api/auth/logout', (req, res) => {
   res.status(204).end();
 });
 
+app.get('/api/preferences', requireAuth, (req, res) => {
+  res.json({ preferences: store.getPreferences(req.user.id) });
+});
+
+app.put('/api/preferences', requireAuth, (req, res) => {
+  const input = req.body?.preferences;
+  const favoriteFilmIds = Array.isArray(input?.favoriteFilmIds)
+    ? [...new Set(input.favoriteFilmIds.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 160))].slice(0, 500)
+    : null;
+  const lastFilmId = input?.lastFilmId === '' || (typeof input?.lastFilmId === 'string' && input.lastFilmId.length <= 160)
+    ? input.lastFilmId
+    : null;
+  const spoilerLevel = input?.spoilerLevel;
+  if (!favoriteFilmIds || lastFilmId === null || !Number.isInteger(spoilerLevel) || spoilerLevel < 0 || spoilerLevel > 2) {
+    return res.status(400).json({ error: 'Preferences must include favorites, a last film, and a spoiler level from 0 to 2.' });
+  }
+  const preferences = store.savePreferences(req.user.id, { favoriteFilmIds, lastFilmId, spoilerLevel });
+  return res.json({ preferences });
+});
+
 const generationRequestsByIp = new Map();
 const STORY_MAP_RATE_WINDOW_MS = 60 * 60 * 1000;
 const STORY_MAP_RATE_LIMIT = 5;

@@ -29,6 +29,11 @@ export function createLibraryStore({ dbPath = process.env.HELIX_DB_PATH || defau
       expires_at INTEGER NOT NULL,
       created_at TEXT NOT NULL
     ) STRICT;
+    CREATE TABLE IF NOT EXISTS user_preferences (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      payload_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    ) STRICT, WITHOUT ROWID;
     CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions(expires_at);
     CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
     CREATE TABLE IF NOT EXISTS films (
@@ -103,6 +108,17 @@ export function createLibraryStore({ dbPath = process.env.HELIX_DB_PATH || defau
     },
     getUserById(id) {
       return db.prepare('SELECT id, email, created_at AS createdAt FROM users WHERE id = ?').get(id) || null;
+    },
+    getPreferences(userId) {
+      const row = db.prepare('SELECT payload_json FROM user_preferences WHERE user_id = ?').get(userId);
+      return row ? JSON.parse(row.payload_json) : { favoriteFilmIds: [], lastFilmId: '', spoilerLevel: 0 };
+    },
+    savePreferences(userId, preferences) {
+      db.prepare(`
+        INSERT INTO user_preferences (user_id, payload_json, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET payload_json = excluded.payload_json, updated_at = excluded.updated_at
+      `).run(userId, JSON.stringify(preferences), new Date().toISOString());
+      return preferences;
     },
     createSession({ tokenHash, userId, expiresAt, createdAt = new Date().toISOString() }) {
       db.prepare('INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)').run(tokenHash, userId, expiresAt, createdAt);

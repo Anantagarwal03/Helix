@@ -13,6 +13,8 @@ const C = {
   amber:   '#f59e0b',
   emerald: '#34d399',
 };
+const INITIAL_MOVIE_COUNT = 8;
+const MOVIE_PAGE_SIZE = 8;
 
 const readSavedValue = (key, fallback) => {
   try {
@@ -20,6 +22,15 @@ const readSavedValue = (key, fallback) => {
     return saved ?? fallback;
   } catch {
     return fallback;
+  }
+};
+
+const readSavedStoryDraft = userId => {
+  try {
+    const draft = JSON.parse(localStorage.getItem(`helix-story-draft:${userId}`) || 'null');
+    return draft?.movie && Array.isArray(draft.storyGraph?.nodes) && Array.isArray(draft.storyGraph?.links) ? draft : null;
+  } catch {
+    return null;
   }
 };
 
@@ -100,7 +111,7 @@ const TerminalSearch = ({ value, onChange, resultCount, total }) => {
   );
 };
 
-const MovieCard = ({ movie }) => {
+const MovieCard = ({ movie, isFavorite, onToggleFavorite, favoritesReady }) => {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -122,12 +133,24 @@ const MovieCard = ({ movie }) => {
         {movie.tmdb?.posterUrl || movie.image
           ? <img
               src={movie.tmdb?.posterUrl || movie.image}
-              alt={movie.title}
+              alt={`${movie.title} poster`}
               onError={event => { event.currentTarget.style.display = 'none'; }}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             />
           : <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center" style={{ background: 'linear-gradient(145deg, #20202b, #111118)', color: 'rgba(255,255,255,.9)' }}><span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">Helix film archive</span><span className="text-lg font-semibold leading-snug">{movie.title}</span><span className="text-xs text-slate-400">{movie.year}</span></div>}
         <div className="absolute inset-0 bg-gradient-to-t from-[#08041c] via-transparent to-transparent opacity-90" />
+
+        <button
+          type="button"
+          aria-label={isFavorite ? `Remove ${movie.title} from favorites` : `Add ${movie.title} to favorites`}
+          aria-pressed={isFavorite}
+          disabled={!favoritesReady}
+          onClick={onToggleFavorite}
+          className="absolute top-2 left-2 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/75 text-lg transition-colors hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50"
+          style={{ color: isFavorite ? '#fbbf24' : 'rgba(255,255,255,0.8)' }}
+        >
+          <span aria-hidden="true">{isFavorite ? '★' : '☆'}</span>
+        </button>
 
         <div
           className="absolute top-2 right-2 z-30 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1"
@@ -196,25 +219,29 @@ const MovieCard = ({ movie }) => {
 
 export default function LibrarySection() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, preferences, preferencesLoaded, updatePreferences } = useAuth();
+  const recoveredStoryDraft = readSavedStoryDraft(user.id);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [visibleMovieCount, setVisibleMovieCount] = useState(INITIAL_MOVIE_COUNT);
   const [movies, setMovies] = useState(() => {
     return [...libraryData, ...withoutCuratedDuplicates(readCachedFilms(user.id))];
   });
   const [tmdbData, setTmdbData] = useState(() => readSavedValue('helix-tmdb-metadata', {}));
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
-  const [showAddFilm, setShowAddFilm] = useState(false);
+  const [showAddFilm, setShowAddFilm] = useState(() => Boolean(recoveredStoryDraft));
   const [lookupQuery, setLookupQuery] = useState('');
   const [lookupResults, setLookupResults] = useState([]);
   const [lookupLoading, setLookupLoading] = useState(false);
-  const [lookupError, setLookupError] = useState('');
+  const [lookupError, setLookupError] = useState(() => recoveredStoryDraft ? 'Recovered your saved story-map draft from this browser. Review it before saving.' : '');
   const [selectedFilm, setSelectedFilm] = useState(null);
-  const [storyDraft, setStoryDraft] = useState(null);
+  const [storyDraft, setStoryDraft] = useState(recoveredStoryDraft);
   const [storyGenerating, setStoryGenerating] = useState(false);
   const [libraryLoading, setLibraryLoading] = useState(true);
   const [savingFilm, setSavingFilm] = useState(false);
   const [libraryApiError, setLibraryApiError] = useState('');
+  const storyDraftStorageKey = `helix-story-draft:${user.id}`;
 
   useEffect(() => {
     let active = true;
@@ -228,6 +255,19 @@ export default function LibrarySection() {
     }).finally(() => { if (active) setLibraryLoading(false); });
     return () => { active = false; };
   }, [user.id]);
+
+  const toggleFavorite = async filmId => {
+    const favorites = preferences.favoriteFilmIds || [];
+    const favoriteFilmIds = favorites.includes(filmId)
+      ? favorites.filter(id => id !== filmId)
+      : [...favorites, filmId];
+    try {
+      await updatePreferences({ favoriteFilmIds });
+      setLibraryApiError('');
+    } catch (error) {
+      setLibraryApiError(`Could not save favorites: ${error.message}`);
+    }
+  };
 
   const syncCurrentFilms = useCallback(async () => {
     setSyncing(true);
@@ -264,6 +304,7 @@ export default function LibrarySection() {
     setLookupError('');
     setSelectedFilm(null);
     setStoryDraft(null);
+    localStorage.removeItem(storyDraftStorageKey);
     try {
       const response = await fetch(`/api/search-movies?query=${encodeURIComponent(lookupQuery.trim())}`);
       const data = await response.json().catch(() => null);
@@ -282,7 +323,6 @@ export default function LibrarySection() {
     if (!selectedFilm) return;
     setStoryGenerating(true);
     setLookupError('');
-    setStoryDraft(null);
     try {
       const response = await fetch('/api/generate-story-map', {
         method: 'POST',
@@ -293,6 +333,7 @@ export default function LibrarySection() {
       if (!data) throw new Error('The story-map server returned an empty response. Make sure the Helix API server is running, then try again.');
       if (!response.ok) throw new Error(data.error || 'Could not generate a story map.');
       setStoryDraft(data);
+      localStorage.setItem(storyDraftStorageKey, JSON.stringify(data));
     } catch (error) {
       setLookupError(error.message || 'Could not generate a story map right now.');
     } finally {
@@ -340,6 +381,7 @@ export default function LibrarySection() {
       setShowAddFilm(false);
       setSelectedFilm(null);
       setStoryDraft(null);
+      localStorage.removeItem(storyDraftStorageKey);
       setLookupQuery('');
       setLookupResults([]);
       navigate(`/graph?film=${encodeURIComponent(graphId)}`);
@@ -359,14 +401,16 @@ export default function LibrarySection() {
         m.twistTag.toLowerCase().includes(q) ||
         m.genre.some(g => g.toLowerCase().includes(q))
       );
-      return matchesSearch;
+      const matchesFavorite = !showFavoritesOnly || preferences.favoriteFilmIds?.includes(m.id);
+      return matchesSearch && matchesFavorite;
     }).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
-  }, [searchQuery, movies, tmdbData]);
+  }, [searchQuery, movies, tmdbData, showFavoritesOnly, preferences.favoriteFilmIds]);
 
   const updatingStoryMap = Boolean(storyDraft && movies.some(movie => movie.graphId === storyDraft.storyGraph.id));
+  const displayedMovies = filteredMovies.slice(0, visibleMovieCount);
 
   return (
-    <div className="min-h-screen bg-transparent text-white p-6 md:p-8 overflow-y-auto w-full box-border pb-24">
+    <div className="min-h-screen bg-transparent text-white p-4 sm:p-6 md:p-8 overflow-y-auto w-full box-border pb-24">
 
       <div className="mb-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-6">
@@ -398,10 +442,19 @@ export default function LibrarySection() {
           <button type="button" onClick={() => setShowAddFilm(true)} className="self-end px-3 py-2 rounded-md font-mono text-[10px] uppercase tracking-wider" style={{ color: C.cyan, border: `1px solid ${C.cyan}50`, background: `${C.cyan}0c` }}>+ Add Film</button>
           <TerminalSearch
             value={searchQuery}
-            onChange={setSearchQuery}
+            onChange={value => { setSearchQuery(value); setVisibleMovieCount(INITIAL_MOVIE_COUNT); }}
             resultCount={filteredMovies.length}
             total={movies.length}
           />
+          <button
+            type="button"
+            aria-pressed={showFavoritesOnly}
+            disabled={!preferencesLoaded}
+            onClick={() => { setShowFavoritesOnly(value => !value); setVisibleMovieCount(INITIAL_MOVIE_COUNT); }}
+            className={`self-end rounded-md border px-3 py-2 text-[10px] font-mono uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 disabled:opacity-50 ${showFavoritesOnly ? 'border-amber-300/50 bg-amber-300/10 text-amber-200' : 'border-white/10 text-slate-400 hover:text-white'}`}
+          >
+            {showFavoritesOnly ? '★ Favorites only' : '☆ Show favorites'}
+          </button>
           </div>
         </div>
 
@@ -430,7 +483,7 @@ export default function LibrarySection() {
             layout
           >
             <AnimatePresence mode="popLayout">
-              {filteredMovies.map((movie) => (
+              {displayedMovies.map((movie) => (
                 <motion.div
                   key={movie.id}
                   layout
@@ -439,13 +492,36 @@ export default function LibrarySection() {
                   exit={{ opacity: 0, scale: 0.94 }}
                   transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
                 >
-                  <MovieCard movie={movie} />
+                  <MovieCard movie={movie} isFavorite={Boolean(preferences.favoriteFilmIds?.includes(movie.id))} favoritesReady={preferencesLoaded} onToggleFavorite={() => toggleFavorite(movie.id)} />
                 </motion.div>
               ))}
             </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {filteredMovies.length > INITIAL_MOVIE_COUNT && (
+        <div className="flex flex-col items-center gap-3 mt-8">
+          {visibleMovieCount < filteredMovies.length ? (
+            <button
+              type="button"
+              onClick={() => setVisibleMovieCount(count => Math.min(count + MOVIE_PAGE_SIZE, filteredMovies.length))}
+              className="rounded-lg border border-white/15 px-5 py-2.5 text-sm text-slate-200 transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+            >
+              Show more films
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { setVisibleMovieCount(INITIAL_MOVIE_COUNT); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="rounded-lg border border-white/15 px-5 py-2.5 text-sm text-slate-200 transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+            >
+              Show fewer films
+            </button>
+          )}
+          <span className="text-xs text-slate-500">Showing {Math.min(visibleMovieCount, filteredMovies.length)} of {filteredMovies.length} films · A–Z</span>
+        </div>
+      )}
 
       <p className="mt-8 text-[10px] text-slate-600 text-center">
         This product uses the <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer" className="underline">TMDB API</a> but is not endorsed or certified by TMDB.
@@ -492,7 +568,8 @@ export default function LibrarySection() {
                 })}</div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => { setStoryDraft(null); generateStoryMap(); }} disabled={storyGenerating} className="rounded-md py-2 text-xs font-semibold border border-white/10 text-slate-300 disabled:opacity-50">Regenerate</button>
+                <button type="button" onClick={generateStoryMap} disabled={storyGenerating} className="rounded-md py-2 text-xs font-semibold border border-white/10 text-slate-300 disabled:opacity-50">Regenerate</button>
+                <button type="button" onClick={() => { setStoryDraft(null); localStorage.removeItem(storyDraftStorageKey); }} disabled={savingFilm || storyGenerating} className="rounded-md py-2 text-xs font-semibold border border-white/10 text-slate-400 hover:text-white disabled:opacity-50">Discard draft</button>
                 <button type="button" onClick={addFilm} disabled={savingFilm || libraryLoading} className="rounded-md py-2 text-xs font-bold disabled:opacity-50" style={{ background: C.cyan, color: '#030014' }}>{libraryLoading ? 'Loading library…' : savingFilm ? 'Saving…' : updatingStoryMap ? 'Approve & replace story map' : 'Approve & add to library'}</button>
               </div>
               <p className="text-[9px] text-slate-500">AI-generated maps can contain mistakes. Review the source links and plot details before approval.</p>

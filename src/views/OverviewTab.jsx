@@ -9,6 +9,7 @@ const C = {
   amber:   '#f59e0b',
   emerald: '#34d399',
 };
+const SORTED_MOVIES = [...MOVIES].sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
 
 const ShimmerCard = ({ children, className = '', accentA = C.cyan, accentB = C.violet, accentC = C.magenta }) => (
   <div className={`relative rounded-xl overflow-hidden p-[1px] ${className}`}>
@@ -26,7 +27,7 @@ const ShimmerCard = ({ children, className = '', accentA = C.cyan, accentB = C.v
 );
 
 const OverviewTab = () => {
-  const [selectedMovieId, setSelectedMovieId] = useState('sixth-sense');
+  const [selectedMovieId, setSelectedMovieId] = useState('');
   const containerRef = useRef(null);
   const spotlightRef = useRef(null);
 
@@ -42,7 +43,7 @@ const OverviewTab = () => {
     return () => el.removeEventListener('mousemove', onMove);
   }, []);
 
-  const selectedMovie = MOVIES.find(movie => movie.id === selectedMovieId) || MOVIES[0];
+  const selectedMovie = SORTED_MOVIES.find(movie => movie.id === selectedMovieId) || null;
 
   return (
     <>
@@ -118,14 +119,15 @@ const OverviewTab = () => {
             <div className="p-6 md:p-8 flex flex-col gap-6">
               <div>
                 <h2 className="text-[12px] font-mono uppercase tracking-[0.14em] font-bold mb-2 text-white/90">Start with one film</h2>
-                <p className="text-xs text-slate-400">Explore its timeline, characters, and story connections.</p>
+                <p className="text-xs text-slate-400">Choose any film to open its timeline, characters, and story connections.</p>
               </div>
               <label htmlFor="overview-film" className="text-[10px] font-mono uppercase tracking-[0.18em] text-cyan-300">Choose a film</label>
               <select id="overview-film" value={selectedMovieId} onChange={event => setSelectedMovieId(event.target.value)} className="select-styled rounded-lg p-3 text-sm font-mono focus:outline-none cursor-pointer bg-black/60 border border-cyan-400/20 text-white">
-                {MOVIES.map(movie => <option key={movie.id} value={movie.id}>{movie.title} ({movie.year})</option>)}
+                <option value="">Choose a film…</option>
+                {SORTED_MOVIES.map(movie => <option key={movie.id} value={movie.id}>{movie.title} ({movie.year})</option>)}
               </select>
-              {selectedMovie && <div className="flex flex-col sm:flex-row gap-5 items-start rounded-xl p-4 bg-black/40 border border-white/10">
-                <img src={selectedMovie.poster} alt={`${selectedMovie.title} poster`} className="w-20 h-28 object-cover rounded-md" />
+              {selectedMovie ? <div className="flex flex-col sm:flex-row gap-5 items-start rounded-xl p-4 bg-black/40 border border-white/10">
+                {selectedMovie.poster ? <img src={selectedMovie.poster} alt={`${selectedMovie.title} poster`} className="w-20 h-28 object-cover rounded-md" /> : <div aria-hidden="true" className="w-20 h-28 shrink-0 rounded-md bg-white/[0.06] flex items-center justify-center text-[10px] text-slate-500">No poster</div>}
                 <div className="flex-1">
                   <h3 className="text-lg text-white font-semibold">{selectedMovie.title}</h3>
                   <p className="text-xs text-slate-400 mt-1">{selectedMovie.year} · {selectedMovie.director}</p>
@@ -136,6 +138,10 @@ const OverviewTab = () => {
                     <Link to="/library" className="rounded-lg px-4 py-2 text-xs font-medium text-slate-200 border border-white/15 hover:bg-white/5 transition-colors">Browse library</Link>
                   </div>
                 </div>
+              </div> : <div className="rounded-xl border border-white/10 bg-black/25 p-5">
+                <p className="text-sm font-medium text-slate-200">No film selected</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-400">Your overview is ready when you are. Pick a title above, or browse the full library first.</p>
+                <Link to="/library" className="mt-4 inline-flex rounded-lg border border-white/15 px-4 py-2 text-xs font-medium text-slate-200 transition-colors hover:bg-white/5">Browse the library</Link>
               </div>}
             </div>
           </ShimmerCard>
@@ -148,7 +154,7 @@ const OverviewTab = () => {
                 <li><span className="text-violet-300 font-mono mr-2">02</span>Follow its events and characters.</li>
                 <li><span className="text-pink-300 font-mono mr-2">03</span>See how the reveal changes earlier scenes.</li>
               </ol>
-              <p className="mt-auto text-[10px] font-mono uppercase tracking-wider text-violet-300">One film at a time · Spoiler-aware maps coming next</p>
+              <p className="mt-auto text-[10px] font-mono uppercase tracking-wider text-violet-300">One film at a time · Spoiler levels on every map</p>
             </div>
           </ShimmerCard>
         </div>

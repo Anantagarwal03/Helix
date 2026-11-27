@@ -248,14 +248,16 @@ const SPOILER_OPTIONS = [
 ];
 
 const GraphSection = () => {
-  const { user } = useAuth();
+  const { user, preferences, preferencesLoaded, updatePreferences } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const routeFilmId = searchParams.get('film');
-  const [selectedFilmId, setSelectedFilmId] = useState(() => routeFilmId || MOVIES[0].id);
+  const [selectedFilmId, setSelectedFilmId] = useState(() => routeFilmId || '');
   const [savedFilmRecords, setSavedFilmRecords] = useState([]);
   const [visibleTypes, setVisibleTypes] = useState(['character', 'event', 'twist']);
-  const [spoilerLevel, setSpoilerLevel] = useState(0);
+  const spoilerLevel = preferences.spoilerLevel;
   const [viewMode, setViewMode] = useState('map');
+  const [nodeSearchQuery, setNodeSearchQuery] = useState('');
+  const [preferenceSaveError, setPreferenceSaveError] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedConnectionId, setSelectedConnectionId] = useState(null);
   const graphRef = useRef(null);
@@ -281,8 +283,19 @@ const GraphSection = () => {
   const selectedFilmIdExists = graphMovies.some(movie => movie.id === selectedFilmId);
   const activeFilmId = routeFilmId && graphMovies.some(movie => movie.id === routeFilmId)
     ? routeFilmId
-    : selectedFilmIdExists ? selectedFilmId : MOVIES[0].id;
+    : selectedFilmIdExists ? selectedFilmId
+      : graphMovies.some(movie => movie.id === preferences.lastFilmId) ? preferences.lastFilmId : MOVIES[0].id;
   const selectedFilm = graphMovies.find(movie => movie.id === activeFilmId) || MOVIES[0];
+
+  const savePreferences = useCallback(patch => updatePreferences(patch)
+    .then(() => setPreferenceSaveError(''))
+    .catch(error => setPreferenceSaveError(`Could not save this preference: ${error.message}`)), [updatePreferences]);
+
+  useEffect(() => {
+    if (preferencesLoaded && activeFilmId && preferences.lastFilmId !== activeFilmId) {
+      void savePreferences({ lastFilmId: activeFilmId });
+    }
+  }, [activeFilmId, preferences.lastFilmId, preferencesLoaded, savePreferences]);
 
   const graphData = useMemo(() => {
     const selectedStory = allStoryGraphs[selectedFilm.id] || { nodes: [], links: [] };
@@ -368,6 +381,9 @@ const GraphSection = () => {
 
   const graphNodesById = useMemo(() => new Map(graphData.nodes.map(node => [node.id, node])), [graphData]);
   const selectableNodes = graphData.nodes.filter(node => node.type !== 'film').sort((a, b) => (a.timelineOrder || 99) - (b.timelineOrder || 99));
+  const nodeSearchMatches = nodeSearchQuery.trim()
+    ? selectableNodes.filter(node => `${node.label} ${node.graphLabel || ''} ${node.type} ${node.timelineStage || ''}`.toLowerCase().includes(nodeSearchQuery.trim().toLowerCase())).slice(0, 8)
+    : [];
   const closePanel = useCallback(() => { setSelectedNode(null); setSelectedConnectionId(null); }, []);
   const handleNodeClick = useCallback(node => { setSelectedNode(node); setSelectedConnectionId(null); }, []);
   const handleLinkClick = useCallback(link => {
@@ -402,6 +418,12 @@ const GraphSection = () => {
     }
   };
 
+  const focusSearchResult = node => {
+    setViewMode('map');
+    focusNode(node);
+    setNodeSearchQuery('');
+  };
+
   const selectTimelineNode = node => {
     setSelectedNode(node);
     setSelectedConnectionId(null);
@@ -415,47 +437,91 @@ const GraphSection = () => {
   ];
 
   return (
-    <div className="relative w-full min-h-full flex flex-col px-5 md:px-8 py-6 md:py-8 gap-4 overflow-y-auto">
+    <div className="relative w-full min-h-full flex flex-col px-3 sm:px-5 md:px-8 py-4 sm:py-6 md:py-8 gap-4 overflow-y-auto">
       <div data-reveal className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 flex-shrink-0">
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-mono text-violet-300/70 uppercase tracking-[0.18em]">02 — One film at a time</span>
           <h2 className="text-[26px] font-bold text-white tracking-tight leading-none mt-1">Story Graph</h2>
           <p className="text-xs text-slate-400 mt-1">Explore the story map or follow its beats in chronological order.</p>
         </div>
-        <label className="flex flex-col gap-1 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+        <label className="flex w-full sm:w-auto flex-col gap-1 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
           Film
-          <select value={activeFilmId} onChange={event => { setSelectedFilmId(event.target.value); setSearchParams({ film: event.target.value }); setSelectedNode(null); setSelectedConnectionId(null); }} className="min-w-56 rounded-lg px-3 py-2 text-sm normal-case tracking-normal text-white bg-black/50 border border-white/10 focus:outline-none focus:border-cyan-400/50">
+          <select value={activeFilmId} onChange={event => { setSelectedFilmId(event.target.value); setSearchParams({ film: event.target.value }); setSelectedNode(null); setSelectedConnectionId(null); setNodeSearchQuery(''); }} className="w-full sm:min-w-56 rounded-lg px-3 py-2.5 text-sm normal-case tracking-normal text-white bg-black/50 border border-white/10 focus:outline-none focus:border-cyan-400/50">
             {graphMovies.map(movie => <option key={movie.id} value={movie.id}>{movie.title} ({movie.year})</option>)}
           </select>
         </label>
       </div>
 
-      <div aria-label="Story graph controls" className="flex flex-wrap items-center gap-x-2 gap-y-2 flex-shrink-0 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-3 md:px-4">
+      <div role="group" aria-label="Story graph controls" className="flex flex-wrap items-center gap-x-2 gap-y-2 flex-shrink-0 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-3 md:px-4">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">Spoiler level</span>
         {SPOILER_OPTIONS.map(option => {
           const active = spoilerLevel === option.level;
-          return <button key={option.level} type="button" aria-pressed={active} onClick={() => { setSpoilerLevel(option.level); setSelectedNode(null); setSelectedConnectionId(null); }} className="rounded-full px-3 py-1.5 text-[10px] font-mono border transition-colors" style={{ color: active ? '#fbbf24' : '#64748b', borderColor: active ? 'rgba(251,191,36,.45)' : 'rgba(255,255,255,.08)', background: active ? 'rgba(251,191,36,.08)' : 'transparent' }}>{option.label}</button>;
+          return <button key={option.level} type="button" aria-pressed={active} disabled={!preferencesLoaded} onClick={() => { setSelectedNode(null); setSelectedConnectionId(null); void savePreferences({ spoilerLevel: option.level }); }} className="min-h-10 rounded-full px-3 py-1.5 text-[10px] font-mono border transition-colors disabled:cursor-wait disabled:opacity-50" style={{ color: active ? '#fbbf24' : '#64748b', borderColor: active ? 'rgba(251,191,36,.45)' : 'rgba(255,255,255,.08)', background: active ? 'rgba(251,191,36,.08)' : 'transparent' }}>{option.label}</button>;
         })}
         <span className="hidden md:block w-px h-5 bg-white/10 mx-1" />
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">Show</span>
         {filters.map(([type, label, color]) => {
           const active = visibleTypes.includes(type);
-          return <button key={type} type="button" aria-pressed={active} onClick={() => toggleFilter(type)} className="rounded-full px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider border transition-colors" style={{ color: active ? color : '#64748b', borderColor: active ? `${color}55` : 'rgba(255,255,255,.08)', background: active ? `${color}10` : 'transparent' }}>{label}</button>;
+          return <button key={type} type="button" aria-pressed={active} onClick={() => toggleFilter(type)} className="min-h-10 rounded-full px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider border transition-colors" style={{ color: active ? color : '#64748b', borderColor: active ? `${color}55` : 'rgba(255,255,255,.08)', background: active ? `${color}10` : 'transparent' }}>{label}</button>;
         })}
         <span className="hidden md:block w-px h-5 bg-white/10 mx-1" />
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">Layout</span>
         {[['map', 'Map'], ['timeline', 'Timeline']].map(([mode, label]) => {
           const active = viewMode === mode;
           return <button key={mode} type="button" aria-pressed={active} onClick={() => setViewMode(mode)}
-            className="rounded-full px-3 py-1.5 text-[10px] font-mono border transition-colors"
+            className="min-h-10 rounded-full px-3 py-1.5 text-[10px] font-mono border transition-colors"
             style={{ color: active ? '#67e8f9' : '#64748b', borderColor: active ? 'rgba(103,232,249,.4)' : 'rgba(255,255,255,.08)', background: active ? 'rgba(103,232,249,.08)' : 'transparent' }}>{label}</button>;
         })}
         <span className="ml-auto text-xs text-slate-400 tabular-nums">{graphData.nodes.length} nodes <span className="text-slate-600">·</span> {graphData.links.length} connections</span>
       </div>
 
       <p className="text-xs text-slate-400">{viewMode === 'map' ? 'Select a node to inspect its story context. Select a connection to read why the beats are linked.' : 'Beats follow story order; character entries mark where their story threads enter the timeline.'} {spoilerLevel < 2 && 'Full ending details appear when Full story is selected.'}</p>
+      {preferenceSaveError && <p role="status" className="text-xs text-amber-300">{preferenceSaveError}</p>}
 
-      {viewMode === 'map' ? <div data-reveal className="relative rounded-xl overflow-hidden flex-shrink-0 h-[48vh] min-h-[340px] max-h-[620px]" style={{ background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-shrink-0">
+        <div className="relative w-full max-w-xl">
+          <label htmlFor="story-node-search" className="sr-only">Search visible story nodes</label>
+          <input
+            id="story-node-search"
+            type="search"
+            value={nodeSearchQuery}
+            onChange={event => setNodeSearchQuery(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === 'Enter' && nodeSearchMatches[0]) {
+                event.preventDefault();
+                focusSearchResult(nodeSearchMatches[0]);
+              }
+              if (event.key === 'Escape') setNodeSearchQuery('');
+            }}
+            placeholder="Find a character or story beat…"
+            autoComplete="off"
+            aria-controls="story-node-search-results"
+            aria-expanded={Boolean(nodeSearchQuery.trim())}
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 pr-10 text-sm text-white placeholder:text-slate-500 focus:border-cyan-300/50 focus:outline-none focus:ring-2 focus:ring-cyan-300/15"
+          />
+          {nodeSearchQuery && (
+            <button type="button" onClick={() => setNodeSearchQuery('')} aria-label="Clear node search" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">×</button>
+          )}
+          {nodeSearchQuery.trim() && (
+            <div id="story-node-search-results" role="listbox" aria-label="Matching visible story nodes" className="absolute top-full left-0 right-0 z-30 mt-2 max-h-72 overflow-y-auto rounded-lg border border-white/10 bg-[#100e1b] p-1.5 shadow-xl">
+              {nodeSearchMatches.length ? nodeSearchMatches.map(node => (
+                <button key={node.id} type="button" role="option" aria-selected={node.id === selectedNode?.id} onClick={() => focusSearchResult(node)} className="flex w-full items-start justify-between gap-4 rounded-md px-3 py-2.5 text-left hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-slate-100">{node.label}</span>
+                    <span className="mt-0.5 block truncate text-xs text-slate-500">{node.timelineStage || 'Story beat'}</span>
+                  </span>
+                  <span className="shrink-0 pt-0.5 text-[10px] uppercase tracking-wide text-cyan-300">{node.type}</span>
+                </button>
+              )) : (
+                <p className="px-3 py-3 text-sm text-slate-400">No visible nodes match. Check the spoiler level and “Show” filters.</p>
+              )}
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-slate-500">Search follows the current spoiler and “Show” filters. Select a result to center it on the map.</p>
+      </div>
+
+      {viewMode === 'map' ? <div data-reveal className="relative rounded-xl overflow-hidden flex-shrink-0 h-[42vh] min-h-[300px] sm:h-[48vh] sm:min-h-[340px] max-h-[620px]" style={{ background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 rounded-lg px-3 py-2 bg-[#030014]/80 border border-white/10">
           <LegendDot color={selectedFilm.accentColor} label="Film" />
           {filters.filter(([type]) => graphData.nodes.some(node => node.type === type)).map(([type, label, color]) => <LegendDot key={label} color={color} label={`${label}${visibleTypes.includes(type) ? '' : ' · context'}`} />)}

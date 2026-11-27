@@ -7,9 +7,11 @@
     "node": ">=25.7.0"
   },
   "scripts": {
+    "predev": "node scripts/validate-story-maps.js",
     "dev": "vite",
     "dev:server": "node server/index.js",
     "test": "npm --prefix server test",
+    "prebuild": "node scripts/validate-story-maps.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

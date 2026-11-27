@@ -114,13 +114,24 @@ export async function requestValidatedStoryDraft({ request, messages, sourceCoun
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     let response;
-    try {
-      response = await request(responseFormat, messages);
-    } catch (requestError) {
-      if (requestError.response?.status !== 400 || responseFormat.type !== 'json_schema') throw requestError;
-      onSchemaFallback(requestError);
-      responseFormat = { type: 'json_object' };
-      response = await request(responseFormat, messages);
+    let transientRetry = 0;
+    while (true) {
+      try {
+        response = await request(responseFormat, messages);
+        break;
+      } catch (requestError) {
+        if (requestError.response?.status === 400 && responseFormat.type === 'json_schema') {
+          onSchemaFallback(requestError);
+          responseFormat = { type: 'json_object' };
+          continue;
+        }
+        const status = requestError.response?.status;
+        const retryableStatus = [408, 500, 502, 503, 504].includes(status);
+        const retryableNetworkError = ['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET'].includes(requestError.code);
+        if (transientRetry >= 2 || (!retryableStatus && !retryableNetworkError)) throw requestError;
+        await new Promise(resolve => setTimeout(resolve, 500 * (2 ** transientRetry)));
+        transientRetry += 1;
+      }
     }
 
     const output = response.data?.choices?.[0]?.message?.content;
