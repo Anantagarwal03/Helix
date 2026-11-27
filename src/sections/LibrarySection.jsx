@@ -43,6 +43,7 @@ const libraryData = [
     };
   }),
 ];
+const withoutCuratedDuplicates = saved => saved.filter(movie => !STORY_GRAPHS[movie.graphId || movie.id]);
 
 const useTilt = (maxTilt = 9) => {
   const ref = useRef(null);
@@ -237,7 +238,7 @@ export default function LibrarySection() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [movies, setMovies] = useState(() => {
-    return [...libraryData, ...readCachedFilms(user.id)];
+    return [...libraryData, ...withoutCuratedDuplicates(readCachedFilms(user.id))];
   });
   const [tmdbData, setTmdbData] = useState(() => readSavedValue('helix-tmdb-metadata', {}));
   const [syncing, setSyncing] = useState(false);
@@ -257,9 +258,12 @@ export default function LibrarySection() {
   useEffect(() => {
     let active = true;
     loadSavedFilms(user.id).then(saved => {
-      if (active) setMovies([...libraryData, ...saved]);
+      if (active) setMovies([...libraryData, ...withoutCuratedDuplicates(saved)]);
     }).catch(error => {
-      if (active) setLibraryApiError(`Saved maps are shown from this browser. The API library could not be loaded: ${error.message}`);
+      if (active) {
+        setMovies([...libraryData, ...withoutCuratedDuplicates(readCachedFilms(user.id))]);
+        setLibraryApiError(`Saved maps are shown from this browser. The API library could not be loaded: ${error.message}`);
+      }
     }).finally(() => { if (active) setLibraryLoading(false); });
     return () => { active = false; };
   }, [user.id]);
@@ -370,7 +374,7 @@ export default function LibrarySection() {
     try {
       await saveFilmToApi(movie);
       const saved = await loadSavedFilms(user.id);
-      setMovies([...libraryData, ...saved]);
+      setMovies([...libraryData, ...withoutCuratedDuplicates(saved)]);
       setLibraryApiError('');
       setShowAddFilm(false);
       setSelectedFilm(null);

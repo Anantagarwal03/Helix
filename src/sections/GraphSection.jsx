@@ -262,8 +262,8 @@ const GraphSection = () => {
   useEffect(() => {
     let active = true;
     loadSavedFilms(user.id)
-      .then(saved => { if (active) setSavedFilmRecords(saved.filter(movie => movie.storyGraph?.nodes && movie.storyGraph?.links)); })
-      .catch(() => { if (active) setSavedFilmRecords(readCachedFilms(user.id).filter(movie => movie.storyGraph?.nodes && movie.storyGraph?.links)); });
+      .then(saved => { if (active) setSavedFilmRecords(saved.filter(movie => movie.storyGraph?.nodes && movie.storyGraph?.links && !STORY_GRAPHS[movie.graphId || movie.id])); })
+      .catch(() => { if (active) setSavedFilmRecords(readCachedFilms(user.id).filter(movie => movie.storyGraph?.nodes && movie.storyGraph?.links && !STORY_GRAPHS[movie.graphId || movie.id])); });
     return () => { active = false; };
   }, [user.id]);
   const graphMovies = useMemo(() => [

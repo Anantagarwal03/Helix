@@ -1,5 +1,6 @@
 // Curated story maps. Movie metadata comes from MOVIES/TMDB; story beats are authored here.
 import { EXPANDED_STORY_GRAPHS } from './expandedStoryGraphs.js';
+import { CURATED_STORY_GRAPHS } from './curatedStoryGraphs.js';
 export const STORY_GRAPHS = {
   'sixth-sense': {
     nodes: [
@@ -156,6 +157,7 @@ export const STORY_GRAPHS = {
     ],
   },
   ...EXPANDED_STORY_GRAPHS,
+  ...CURATED_STORY_GRAPHS,
 }
 
 export const INTER_FILM_LINKS = [

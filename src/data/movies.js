@@ -3,6 +3,7 @@ import donnieDarkoImg from '../assets/posters/donnie-darko.jpg'
 import zodiacImg from '../assets/posters/zodiac.jpg'
 import taxiDriverImg from '../assets/posters/taxi-driver.jpg'
 import oldboyImg from '../assets/posters/oldboy.jpg'
+import { STORY_GRAPHS } from './storyGraphs.js'
 
 export const MOVIES = [
   {
@@ -122,13 +123,55 @@ export const MOVIES = [
     genres: ['Thriller', 'Drama'], twistType: 'Story Within a Story / Emotional Revenge',
     accentColor: '#c084fc', twistScore: '—', nodes: 10, events: 5,
   },
+  {
+    id: 'tmdb-206487', title: 'Predestination', director: 'Michael and Peter Spierig', year: 2014,
+    complexity: 'High', poster: null, posterUrl: null,
+    genres: ['Science Fiction', 'Thriller'], twistType: 'Causal Loop / Identity Paradox',
+    accentColor: '#60a5fa', twistScore: '—', nodes: 19, events: 12,
+  },
+  {
+    id: 'arrival', title: 'Arrival', director: 'Denis Villeneuve', year: 2016,
+    complexity: 'High', poster: null, posterUrl: null,
+    genres: ['Science Fiction', 'Drama'], twistType: 'Nonlinear Time / Language',
+    accentColor: '#67e8f9', twistScore: '—', nodes: 18, events: 12,
+  },
+  {
+    id: 'the-prestige', title: 'The Prestige', director: 'Christopher Nolan', year: 2006,
+    complexity: 'High', poster: null, posterUrl: null,
+    genres: ['Drama', 'Mystery'], twistType: 'Rivalry / Duplicated Identity',
+    accentColor: '#c4b5fd', twistScore: '—', nodes: 19, events: 11,
+  },
+  {
+    id: 'gone-girl', title: 'Gone Girl', director: 'David Fincher', year: 2014,
+    complexity: 'High', poster: null, posterUrl: null,
+    genres: ['Thriller', 'Mystery'], twistType: 'Unreliable Narration / Media Manipulation',
+    accentColor: '#fda4af', twistScore: '—', nodes: 19, events: 12,
+  },
+  {
+    id: 'get-out', title: 'Get Out', director: 'Jordan Peele', year: 2017,
+    complexity: 'High', poster: null, posterUrl: null,
+    genres: ['Horror', 'Thriller'], twistType: 'Social Horror / Bodily Appropriation',
+    accentColor: '#86efac', twistScore: '—', nodes: 19, events: 11,
+  },
+  {
+    id: 'shutter-island', title: 'Shutter Island', director: 'Martin Scorsese', year: 2010,
+    complexity: 'High', poster: null, posterUrl: null,
+    genres: ['Mystery', 'Thriller'], twistType: 'Delusion / Staged Investigation',
+    accentColor: '#fdba74', twistScore: '—', nodes: 19, events: 12,
+  },
+  {
+    id: 'se7en', title: 'Se7en', director: 'David Fincher', year: 1995,
+    complexity: 'High', poster: null, posterUrl: null,
+    genres: ['Crime', 'Mystery', 'Thriller'], twistType: 'Seven Deadly Sins / Forced Final Choice',
+    accentColor: '#f87171', twistScore: '—', nodes: 20, events: 15,
+  },
 ];
 
 export const STATS = [
-  { label: 'Films Indexed',     value: '12',  color: '#00f2fe', badgeClass: 'badge-cyan'   },
-  { label: 'Characters Mapped', value: '41', color: '#8b5cf6', badgeClass: 'badge-violet' },
-  { label: 'Story Events',      value: '67', color: '#ec4899', badgeClass: 'badge-pink'   },
-  { label: 'Twist Nodes',       value: '12', color: '#fbbf24', badgeClass: 'badge-slate'  },
+  { label: 'Films Indexed',     value: String(Object.keys(STORY_GRAPHS).length), color: '#00f2fe', badgeClass: 'badge-cyan' },
+  { label: 'Characters Mapped', value: String(Object.values(STORY_GRAPHS).reduce((sum, graph) => sum + graph.nodes.filter(node => node.type === 'character').length, 0)), color: '#8b5cf6', badgeClass: 'badge-violet' },
+  { label: 'Story Events',      value: String(Object.values(STORY_GRAPHS).reduce((sum, graph) => sum + graph.nodes.filter(node => node.type === 'event').length, 0)), color: '#ec4899', badgeClass: 'badge-pink' },
+  { label: 'Twist Nodes',       value: String(Object.values(STORY_GRAPHS).reduce((sum, graph) => sum + graph.nodes.filter(node => node.type === 'twist').length, 0)), color: '#fbbf24', badgeClass: 'badge-slate' },
 ]
 
 export const TABLE_SAMPLE_DATA = [

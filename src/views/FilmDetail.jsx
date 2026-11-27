@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion'
 import { MOVIES } from '../data/movies'
+import { STORY_GRAPHS } from '../data/storyGraphs'
 import { useAuth } from '../auth/useAuth'
 import { loadSavedFilms, readCachedFilms } from '../utils/libraryApi'
 
@@ -68,7 +69,8 @@ export default function FilmDetail() {
   const film = useMemo(() => {
     const targetFilm = MOVIES.find(movie => movie.id === id) || savedFilmRecords.find(movie => movie.id === id || movie.graphId === id)
     if (!targetFilm) return null
-    const storyNodes = targetFilm.storyGraph?.nodes || []
+    const storyGraph = targetFilm.storyGraph || STORY_GRAPHS[targetFilm.graphId || targetFilm.id]
+    const storyNodes = storyGraph?.nodes || []
     const tmdb = targetFilm.tmdb || targetFilm
     const characters = storyNodes.filter(node => node.type === 'character')
     return {
@@ -79,9 +81,9 @@ export default function FilmDetail() {
         poster: tmdb.posterUrl || targetFilm.posterUrl || targetFilm.image || targetFilm.poster,
         tagline: targetFilm.tagline || 'A sourced story map, ready to explore.',
         runtime: targetFilm.runtime || 'Runtime unavailable',
-        summary: targetFilm.synopsis || targetFilm.overview || storyNodes.find(node => node.type === 'film')?.revealSubtext || targetFilm.storyGraph?.summary || 'This film has been added to the library.',
+        summary: targetFilm.synopsis || targetFilm.overview || storyNodes.find(node => node.type === 'film')?.revealSubtext || storyGraph?.summary || 'This film has been added to the library.',
         genres: tmdb.genres || targetFilm.genres || targetFilm.genre || ['Genre unavailable'],
-        themes: targetFilm.themes || [targetFilm.twistTag || targetFilm.storyGraph?.twistType || 'Story analysis'],
+        themes: targetFilm.themes || [targetFilm.twistTag || storyGraph?.twistType || 'Story analysis'],
         cast: targetFilm.cast || (characters.length ? characters.map(node => ({ actor: node.label, role: node.revealClassification || 'Mapped character' })) : [{ actor: targetFilm.director, role: 'Director Archival Core' }]),
         boxOffice: targetFilm.boxOffice || 'Box office data unavailable',
         reception: targetFilm.reception || (Number(tmdb.rating) > 0 ? `TMDB ${Number(tmdb.rating).toFixed(1)} / 10 · ${Number(tmdb.voteCount || 0).toLocaleString()} votes` : 'Rating unavailable'),
